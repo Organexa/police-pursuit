@@ -3,7 +3,7 @@
 _Last updated: 2026-11-25_
 
 ## Current phase
-**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. T0.2 workflows written and committed (repo `Organexa/police-pursuit`); waiting on push + first CI run. Next: T0.3.
+**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. T0.2 workflows pushed to `Organexa/police-pursuit` (2026-11-25); repo must be made public, then check the first CI run. Next: T0.3.
 
 ## Decisions so far
 | Topic | Decision |
@@ -54,9 +54,9 @@ _Last updated: 2026-11-25_
 - [x] T0.1 scaffold (folders, Packages/manifest.json, ProjectVersion 6000.3.29f1, .gitignore), 2026-11-25; confirmed when CI opens it in T0.2
 
 ## Next
-- [ ] ◐ T0.2 CI workflows written; waiting on push + first green run → T0.3, then F1–F14 (order in FEATURE-TICKETS.md)
+- [ ] ◐ T0.2 CI workflows pushed; waiting on repo going public + first green run → T0.3, then F1–F14 (order in FEATURE-TICKETS.md)
 - [ ] ◐ GitHub setup for **Organexa** (DEPLOYMENT.md), in order:
-  - [ ] §1 create public repo `police-pursuit`, then push
+  - [ ] ◐ §1 repo `police-pursuit` created and pushed; still private — make it public
   - [ ] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`
   - [ ] §5 secrets `GH_SECRETS_TOKEN`, `KEYSTORE_BACKUP_PASSPHRASE`, then run **create-keystore**
   - [ ] §6 download the encrypted `keystore-backup` (kept 1 day)
