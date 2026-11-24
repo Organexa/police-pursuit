@@ -68,6 +68,8 @@ The workflow from §5 also leaves an **encrypted** backup as a download on its r
 2. Store it somewhere private and offline, such as a USB stick, plus a personal cloud drive. Keep `KEYSTORE_BACKUP_PASSPHRASE` in your password manager.
 3. **Why it matters:** we use **Play App Signing**, so Google holds the real app-signing key and this keystore is only the *upload key*. If you lose it, Play support can reset it, but that takes days. With the backup you lose nothing.
 4. The backup is encrypted (AES-256), so the file is useless without your passphrase.
+5. To restore, run this (it asks for the passphrase):
+   `openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in keystore-backup.tar.gz.enc | tar xz`
 
 ## 7. Google sign-in (Google Cloud, free)
 1. Go to console.cloud.google.com and pick the project Firebase created. Open **APIs & Services → OAuth consent screen**:

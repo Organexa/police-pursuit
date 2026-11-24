@@ -12,14 +12,14 @@ _Version 1.0 · 2026-11-25_
 
 ## T0 — Project setup
 
-### T0.1 ◐ Repository and Unity project
+### T0.1 ☑ Repository and Unity project
 - **Tasks:**
   - Create the folder layout (ARCHITECTURE §7).
   - Create a Unity 6 LTS URP project with the packages from TRD §1.
   - Add `.gitignore` with the secret-file blocks (RULES §2.4).
 - **Done when:** the project opens in CI without errors and no secret file can be committed.
 
-### T0.2 ☐ CI workflows
+### T0.2 ◐ CI workflows
 - **Tasks:**
   - Write `test.yml`, `build.yml`, `deploy-backend.yml`, `deploy-admin.yml`, `keep-alive.yml`, `create-keystore.yml` (TRD §8).
 - **Done when:**

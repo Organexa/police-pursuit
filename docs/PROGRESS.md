@@ -3,7 +3,7 @@
 _Last updated: 2026-11-25_
 
 ## Current phase
-**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. Next: T0.2 (CI workflows) — needs your GitHub repo and username → test → deploy → handover.
+**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. T0.2 workflows written and committed (repo `Organexa/police-pursuit`); waiting on push + first CI run. Next: T0.3.
 
 ## Decisions so far
 | Topic | Decision |
@@ -54,7 +54,12 @@ _Last updated: 2026-11-25_
 - [x] T0.1 scaffold (folders, Packages/manifest.json, ProjectVersion 6000.3.29f1, .gitignore), 2026-11-25; confirmed when CI opens it in T0.2
 
 ## Next
-- [ ] Build T0.2 → T0.3, then F1–F14 (order in FEATURE-TICKETS.md)
-- [ ] ◐ GitHub setup (DEPLOYMENT §1 + Unity secrets from §4) — in progress, waiting for your GitHub username
+- [ ] ◐ T0.2 CI workflows written; waiting on push + first green run → T0.3, then F1–F14 (order in FEATURE-TICKETS.md)
+- [ ] ◐ GitHub setup for **Organexa** (DEPLOYMENT.md), in order:
+  - [ ] §1 create public repo `police-pursuit`, then push
+  - [ ] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`
+  - [ ] §5 secrets `GH_SECRETS_TOKEN`, `KEYSTORE_BACKUP_PASSPHRASE`, then run **create-keystore**
+  - [ ] §6 download the encrypted `keystore-backup` (kept 1 day)
+  - [ ] §2 (later, T0.3) secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` (Settings → Secrets and variables → Actions → Variables)
 - [ ] Supabase setup (DEPLOYMENT §2) — I'll say when it's needed
 - [ ] Test, deploy, handover
