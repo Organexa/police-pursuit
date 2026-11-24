@@ -1,0 +1,49 @@
+name: test
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  unity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/cache@v4
+        with:
+          path: unity/Library
+          key: Library-test-${{ hashFiles('unity/Packages/**', 'unity/ProjectSettings/**') }}
+          restore-keys: Library-test-
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity
+          unityVersion: 6000.3.29f1
+          testMode: all
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        if: hashFiles('supabase/functions/**/*.ts') != ''
+        with:
+          deno-version: v2.x
+      - name: Edge Function tests
+        if: hashFiles('supabase/functions/**/*.ts') != ''
+        run: deno test --allow-all supabase/functions
+      - uses: supabase/setup-cli@v1
+        if: hashFiles('supabase/config.toml') != ''
+        with:
+          version: latest
+      - name: RLS tests
+        if: hashFiles('supabase/config.toml') != ''
+        run: |
+          supabase start
+          supabase test db

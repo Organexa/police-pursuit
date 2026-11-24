@@ -1,0 +1,41 @@
+name: deploy-backend
+
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check readiness
+        id: ready
+        run: |
+          if [ -z "$PROJECT_REF" ] || [ ! -f supabase/config.toml ]; then
+            echo "::notice::Supabase not set up yet (DEPLOYMENT §2 / T0.3). Skipping."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: supabase/setup-cli@v1
+        if: steps.ready.outputs.go == 'true'
+        with:
+          version: latest
+      - name: Apply migrations and deploy functions
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          supabase db push
+          if ls supabase/functions/*/index.ts >/dev/null 2>&1; then
+            supabase functions deploy --project-ref "$PROJECT_REF"
+          fi
