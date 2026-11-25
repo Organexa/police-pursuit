@@ -12,12 +12,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: true
+      - name: Check Unity license
+        id: ready
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if [ -z "$UNITY_LICENSE" ]; then
+            echo "::notice::UNITY_LICENSE secret not set yet (DEPLOYMENT §4). Skipping Unity tests."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/cache@v4
+        if: steps.ready.outputs.go == 'true'
         with:
           path: unity/Library
           key: Library-test-${{ hashFiles('unity/Packages/**', 'unity/ProjectSettings/**') }}
           restore-keys: Library-test-
       - uses: game-ci/unity-test-runner@v4
+        if: steps.ready.outputs.go == 'true'
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}

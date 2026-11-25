@@ -3,7 +3,7 @@
 _Last updated: 2026-11-25_
 
 ## Current phase
-**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. T0.2 workflows pushed to `Organexa/police-pursuit` (2026-11-25); repo must be made public, then check the first CI run. Next: T0.3.
+**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. T0.2 workflows pushed to `Organexa/police-pursuit` (public, 2026-11-25). First CI run: backend tests pass (skipped, nothing to test yet); unity tests failed (exit code 1, no license), so the unity test job now skips until `UNITY_LICENSE` exists; the build stops at "Check signing secrets" until the §5 keystore exists. Neither is a workflow bug. Next: add the secrets, re-run, then T0.3.
 
 ## Decisions so far
 | Topic | Decision |
@@ -54,10 +54,10 @@ _Last updated: 2026-11-25_
 - [x] T0.1 scaffold (folders, Packages/manifest.json, ProjectVersion 6000.3.29f1, .gitignore), 2026-11-25; confirmed when CI opens it in T0.2
 
 ## Next
-- [ ] ◐ T0.2 CI workflows pushed; waiting on repo going public + first green run → T0.3, then F1–F14 (order in FEATURE-TICKETS.md)
+- [ ] ◐ T0.2 CI workflows pushed; waiting on secrets (§4, §5), then re-run failed jobs for the first green run → T0.3, then F1–F14 (order in FEATURE-TICKETS.md)
 - [ ] ◐ GitHub setup for **Organexa** (DEPLOYMENT.md), in order:
-  - [ ] ◐ §1 repo `police-pursuit` created and pushed; still private — make it public
-  - [ ] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD`
+  - [x] §1 repo `police-pursuit` created, pushed, public (2026-11-25)
+  - [ ] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` (unity test job skips until these exist)
   - [ ] §5 secrets `GH_SECRETS_TOKEN`, `KEYSTORE_BACKUP_PASSPHRASE`, then run **create-keystore**
   - [ ] §6 download the encrypted `keystore-backup` (kept 1 day)
   - [ ] §2 (later, T0.3) secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` (Settings → Secrets and variables → Actions → Variables)
