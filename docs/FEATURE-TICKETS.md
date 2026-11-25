@@ -27,7 +27,7 @@ _Version 1.0 · 2026-11-25_
   - `main` produces a signed APK + AAB on a GitHub Release;
   - no secret value appears in any log.
 
-### T0.3 ☐ Supabase schema
+### T0.3 ☑ Supabase schema
 - **Tasks:**
   - Migrations for every TRD §2 table, the `leaderboard` view, `my_rank()` and `is_admin()`.
   - RLS on every table; the 64 KB save cap.
