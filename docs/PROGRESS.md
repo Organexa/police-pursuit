@@ -42,6 +42,7 @@ _Last updated: 2026-11-26_
 - F14 not done: URL and anon key in `admin/config.js`; admin user (DEPLOYMENT §8); migration and pgTAP not run; never used against real Supabase. Library is version-pinned without an integrity hash.
 - Admin panel link (after push): https://organexa.github.io/police-pursuit/
 - Pushed to branch `feat/f1-f14` 2026-11-26. CI run 45814665192: Deno function tests and database (pgTAP) tests passed, so the earlier "not run" notes for those are closed. Unity tests skipped (no `UNITY_LICENSE` secret).
+- CI Unity tests green 2026-11-26 (run 45820689126, commit ba70bcc, Unity 6000.3.29f1): needed `containerRegistryImageVersion: 4`, `unity-test-runner@v4.3.2` (the @v4 release exited with no message) and the three `UNITY_*` secrets. Sign-in succeeded only after two retries. Test counts not read from the log.
 - Next: all F1–F14 code is written; what remains is setup, merging to `main`, a CI build and phone checks.
 
 ## Decisions so far
@@ -111,7 +112,7 @@ _Last updated: 2026-11-26_
 - [ ] ◐ F14 Admin panel (code done 2026-11-26; Supabase setup and manual check open)
 - [ ] ◐ GitHub setup for **Organexa** (DEPLOYMENT.md), in order:
   - [x] §1 repo `police-pursuit` created, pushed, public (2026-11-25)
-  - [ ] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` (unity test job skips until these exist)
+  - [x] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` (2026-11-26; license expires 2026-12-24)
   - [ ] §5 secrets `GH_SECRETS_TOKEN`, `KEYSTORE_BACKUP_PASSPHRASE`, then run **create-keystore**
   - [ ] §6 download the encrypted `keystore-backup` (kept 1 day)
   - [ ] §2 (later, T0.3) secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` (Settings → Secrets and variables → Actions → Variables)

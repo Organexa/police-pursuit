@@ -1,0 +1,47 @@
+name: android-check
+
+# A debug-signed APK from a feature branch: proves the Android plugins and SDKs compile before the
+# release keystore exists. Releases still come from build.yml.
+on:
+  push:
+    branches-ignore: [main]
+    paths: ['unity/**', '.github/workflows/android-check.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: actions/cache@v4
+        with:
+          path: unity/Library
+          key: Library-Android-${{ hashFiles('unity/Packages/**', 'unity/ProjectSettings/**') }}
+          restore-keys: Library-Android-
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity
+          unityVersion: 6000.3.29f1
+          containerRegistryImageVersion: 4
+          targetPlatform: Android
+          buildName: PolicePursuit
+          androidExportType: androidPackage
+          versioning: Custom
+          version: 1.0.0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: build/Android/*.apk
+          if-no-files-found: error
+          retention-days: 3
