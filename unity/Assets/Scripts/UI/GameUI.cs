@@ -243,6 +243,9 @@ namespace PolicePursuit.UI
                 AskDelete).transform.parent.gameObject;
             delete.GetComponent<Image>().color = Gameplay.Shapes.Red;
             deleteButton = delete;
+            // Google Play wants the policy reachable from inside the app.
+            MakeButton(settings.transform, "Privacy policy", Middle, new Vector2(230, -180), Button,
+                () => Application.OpenURL("https://organexa.github.io/police-pursuit/privacy.html"));
 
             BuildGarage(safe);
             BuildBoard(safe);
