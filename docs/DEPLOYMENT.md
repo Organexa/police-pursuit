@@ -110,6 +110,28 @@ The workflow from §5 also leaves an **encrypted** backup as a download on its r
    - Answer honestly. The game has cartoon-style car crashes and police chases, with no blood.
    - Turn on **Play App Signing**. It's the default.
 
+## 9a. LevelPlay (ads, free)
+Ads and the consent popup stay hidden until all three values below are filled in.
+1. Sign up for Unity LevelPlay and add an **Android app** with the package name `com.policepursuit.game`.
+2. Create one **rewarded** ad unit and one **interstitial** ad unit.
+3. Send me the **app key** and the two **ad unit IDs**. They are public values that ship inside the app.
+4. Use LevelPlay's test mode or a registered test device while testing. Tapping your own live ads can get the account banned.
+5. Check LevelPlay's own Data Safety guidance and compare it with `SECURITY-AND-ACCESS.md` §5.
+
+## 9b. Values that go into the code
+All are public by design. Each feature stays hidden or off while its values are empty.
+
+| Value | From | Goes into |
+|---|---|---|
+| Supabase project URL, anon key | §2 | `unity/Assets/Scripts/Core/Auth.cs` and `admin/config.js` |
+| Google **web** client ID | §7 | `Auth.cs` |
+| LevelPlay app key, rewarded ID, interstitial ID | §9a | `unity/Assets/Scripts/Core/Ads.cs` |
+| Google Play public licensing key (Play Console → Monetize → Licensing) | §9 | `unity/Assets/Scripts/Core/Shop.cs` |
+
+**Never** send or commit a service role key, client secret, private key or password.
+
+In Play Console, also create these in-app products: `remove_ads`, `coins_small`, `coins_medium`, `coins_large`, `car_phantom`.
+
 ## 10. iOS (optional, not in v1)
 - iOS needs an Apple Developer account, which costs US$99 a year.
 - GameCI can build the iOS project, but signing and uploading need a macOS build machine. GitHub's macOS minutes are free for public repos.

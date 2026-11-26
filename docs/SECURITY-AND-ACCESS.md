@@ -71,7 +71,7 @@ Fill the Play Console form with these. They must match the real game (RULES §6.
 |---|---|---|---|---|---|
 | Personal info → Email address | Google account email (in Supabase Auth) | Yes | No | Optional (sign-in) | Account management |
 | Personal info → User IDs | Supabase user ID, Google account ID | Yes | No | Optional (sign-in) | Account management, app functionality |
-| Personal info → Name | Display name on the leaderboard | Yes | No | Optional | App functionality |
+| Personal info → Name | Leaderboard display name; Google name and picture link (stored by Supabase Auth at sign-in, not shown to others) | Yes | No | Optional | Account management, app functionality |
 | App activity → Other user-generated content / In-app actions | Scores and run stats, cloud save | Yes | No | Optional (sign-in) | App functionality |
 | Device or other IDs | FCM token; advertising ID and device IDs used by LevelPlay | Yes | Yes (ad networks) | FCM: optional. Ads: needed for ads | Push messages, advertising, fraud prevention, analytics |
 | Financial info → Purchase history | Handled by Google Play Billing; the game only stores what it unlocked | Yes | No | Optional | App functionality |
