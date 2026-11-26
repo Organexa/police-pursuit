@@ -44,7 +44,8 @@ namespace PolicePursuit.UI
             var scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(800, 450);
-            scaler.matchWidthOrHeight = 0.5f;
+            // The canvas is never smaller than the reference, so nothing is cut off on wide or squarish screens.
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             gameObject.AddComponent<GraphicRaycaster>();
             EnsureEventSystem();
 

@@ -139,6 +139,15 @@ public class FlowTests
             Assert.AreEqual("PolicePursuit/Flat", r.sharedMaterial.shader.name, r.name);
     }
 
+    // Wide phones used to cut the Back buttons off.
+    [UnityTest]
+    public IEnumerator CanvasNeverShrinksBelowTheLayout()
+    {
+        yield return null;
+        var scaler = GameManager.Instance.GetComponentInChildren<UnityEngine.UI.CanvasScaler>();
+        Assert.AreEqual(UnityEngine.UI.CanvasScaler.ScreenMatchMode.Expand, scaler.screenMatchMode);
+    }
+
     [UnityTest]
     public IEnumerator TutorialCanBeStartedAndSkipped()
     {
