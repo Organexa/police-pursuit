@@ -79,7 +79,8 @@ namespace PolicePursuit.Core
         static readonly string SupabaseUrl = "https://dumwtlqllfyhbdxglsvc.supabase.co";
         static readonly string AnonKey =
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bXd0bHFsbGZ5aGJkeGdsc3ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3MDgzOTIsImV4cCI6MjExMTI4NDM5Mn0.wV3hoyQmP4SRv2szu3bkzo-oOHTgJZI3e5r4Sh3weig";
-        static readonly string GoogleWebClientId = "";
+        static readonly string GoogleWebClientId =
+            "949505289565-an3u02lbbr4b8i4d6qv5q5sqthqq3v7p.apps.googleusercontent.com";
 
         const string JavaClass = "com.policepursuit.signin.GoogleSignIn";
 

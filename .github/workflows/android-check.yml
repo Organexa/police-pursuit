@@ -1,7 +1,7 @@
 name: android-check
 
-# A debug-signed APK from a feature branch: proves the Android plugins and SDKs compile before the
-# release keystore exists. Releases still come from build.yml.
+# A test APK from a feature branch: proves the Android plugins and SDKs compile. Debug-signed until the
+# keystore exists, then signed with the upload key. Releases still come from build.yml.
 on:
   push:
     branches-ignore: [main]
@@ -39,6 +39,13 @@ jobs:
           androidExportType: androidPackage
           versioning: Custom
           version: 1.0.0
+          # Once create-keystore has run, sign with the upload key so every test build has the same
+          # fingerprint (Google sign-in checks it). Until then these are empty and a debug key is used.
+          androidKeystoreName: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && 'upload.keystore' || '' }}
+          androidKeystoreBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          androidKeystorePass: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          androidKeyaliasName: ${{ secrets.ANDROID_KEYALIAS_NAME }}
+          androidKeyaliasPass: ${{ secrets.ANDROID_KEYALIAS_PASS }}
       - uses: actions/upload-artifact@v4
         with:
           name: debug-apk
