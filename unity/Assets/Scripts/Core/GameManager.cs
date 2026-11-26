@@ -24,6 +24,7 @@ namespace PolicePursuit.Core
         public Auth Auth { get; private set; }
         public CloudSave Cloud { get; private set; }
         public Shop Shop { get; private set; }
+        public Sound Sound { get; private set; }
         public IAds Ads { get; set; } // tests swap in a fake
         public float ContinueLeft { get; private set; } // seconds the "Continue" offer stays up
         public bool CanDouble => State == GameState.Results && !doubled && Stats.Coins > 0 && Ads.RewardedReady;
@@ -67,6 +68,8 @@ namespace PolicePursuit.Core
             coins.Init(Player);
             Cam = CarCamera.Create(Player.transform);
             ui = Child<GameUI>("UI");
+            Sound = Child<Sound>("Sound"); // before the UI builds its buttons
+            Sound.Init(this);
             ApplySettings(SaveData.Load(SaveData.DefaultPath));
             Auth = Child<Auth>("Auth");
             Cloud = Child<CloudSave>("CloudSave");
@@ -87,6 +90,9 @@ namespace PolicePursuit.Core
             coins.Collected += OnCoin;
             Player.Destroyed += OnDestroyedCar;
             Player.Damaged += Buzz;
+            Player.Damaged += Sound.Hit;
+            Traffic.NearMiss += Sound.NearMiss;
+            coins.Collected += Sound.CoinPickup;
 
             ToMenu();
             var saved = SaveData.Load(SaveData.DefaultPath);
@@ -257,8 +263,8 @@ namespace PolicePursuit.Core
             Buzz();
         }
 
-        // shortcut: the game has no audio yet, so sound drives the master volume and music is only saved;
-        // split into mixer groups when audio is added.
+        // shortcut: there is no music yet, so "Sound" is the master volume and "Music" is only saved;
+        // split into mixer groups when music is added.
         public void ApplySettings(SaveData s)
         {
             Settings = s;

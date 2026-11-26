@@ -24,6 +24,14 @@ namespace PolicePursuit.Gameplay
 
         public void Init(PlayerCar target) => player = target;
 
+        // Metres to the closest police car, for the siren; huge when there is none.
+        public float NearestCop(Vector3 from)
+        {
+            float nearest = float.MaxValue;
+            foreach (var c in cops) nearest = Mathf.Min(nearest, Vector3.Distance(from, c.position));
+            return nearest;
+        }
+
         public void ResetTraffic()
         {
             foreach (var c in civils) Remove(c.T);

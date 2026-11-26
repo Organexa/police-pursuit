@@ -241,6 +241,24 @@ public class CoreTests
     }
 
     [Test]
+    public void SoundLoopsAndLevels()
+    {
+        // A loop that ends where it starts has no audible click.
+        foreach (var wave in new Func<float, float>[] { Sound.Engine, Sound.Siren })
+        {
+            var samples = Sound.Samples(1f, wave);
+            Assert.AreEqual(Sound.Rate, samples.Length);
+            Assert.AreEqual(wave(0), wave(1), 0.01f);
+            Assert.Greater(Array.FindAll(samples, s => Mathf.Abs(s) > 0.2f).Length, samples.Length / 4);
+        }
+        Assert.AreEqual(1f, Sound.SirenVolume(0));
+        Assert.AreEqual(0.5f, Sound.SirenVolume(30), 0.001f);
+        Assert.AreEqual(0f, Sound.SirenVolume(float.MaxValue));
+        Assert.AreEqual(0.8f, Sound.EnginePitch(0, 30), 0.001f);
+        Assert.AreEqual(2f, Sound.EnginePitch(39, 30), 0.001f); // boost does not go higher
+    }
+
+    [Test]
     public void ScoreQueueLimitAndRemove()
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");

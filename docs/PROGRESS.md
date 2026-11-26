@@ -11,7 +11,7 @@ _Last updated: 2026-11-26_
 - T0.3 Supabase schema done: RLS tests (24 pgTAP) green in CI run 45562016508.
 - Secrets setup deferred by you.
 - F1 code done 2026-11-26: EditMode 10/10 and PlayMode 1/1 passed locally on a scratch copy in Unity 6000.6.10f1 (project pins 6000.3.29f1; not yet run in CI).
-- Tilt steering and engine audio not built.
+- Tilt steering and engine audio: built later (see the sound note below).
 - F2 code done 2026-11-26: EditMode 11/11 and PlayMode 2/2 passed on the same scratch-copy setup.
 - F3 code done 2026-11-26: EditMode 13/13 and PlayMode 2/2 passed on the same scratch-copy setup.
 - Premium-car IAP waits on F10.
@@ -46,6 +46,7 @@ _Last updated: 2026-11-26_
 - First Android build green 2026-11-26 (android-check run 45831271887, commit 2130b84, debug-signed APK artifact kept 3 days). It needed `LevelPlaySdk.androidlib` (mediation-sdk 9.6.0); keep that version in step with the LevelPlay package. First phone install: car invisible and buttons hard to see (shapes drew with the error shader; navy buttons on navy road). Fixed 2026-11-26 with `Assets/Resources/Flat.shader`, button outlines and landscape-only (EditMode 21/21, PlayMode 5/5, Windows screenshot); phone recheck and drift feel open. Self-test 2026-11-26: Settings and Leaderboard were cut off on wide screens, fixed (CanvasScaler Expand); EditMode 21/21, PlayMode 6/6, function tests 13/13; drift confirmed working in a Windows build via simulated presses.
 - Signing key (§5) not created: 3 runs failed 2026-11-26, last with HTTP 403 (GH_SECRETS_TOKEN lacks Repository permissions > Secrets: Read and write). Nothing half-saved. The workflow now checks this first (also on `main`, commit 8a7b116). Paused by you. Pull request #1 is open; do not merge before the key and Supabase are set up.
 - Privacy policy drafted 2026-11-26 at `admin/privacy.html` (for Play Console; needs your review; published only when `admin/` reaches `main`). It discloses that Google sign-in stores name and picture link, which SECURITY §5 does not list yet.
+- Sound effects added 2026-11-26 (`Gameplay/Sound.cs`, synthesised: engine, police siren by distance, crash, coin, near miss, button click). EditMode 22/22, PlayMode 7/7 on the scratch copy; nobody has listened to it yet. Music (DESIGN §9) not built, so the Music slider is only saved.
 - Next: all F1–F14 code is written; what remains is a phone check, setup, merging to `main` and the signed release build.
 
 ## Decisions so far

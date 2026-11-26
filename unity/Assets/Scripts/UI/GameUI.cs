@@ -619,7 +619,12 @@ namespace PolicePursuit.UI
             var edge = image.gameObject.AddComponent<Outline>();
             edge.effectColor = Gameplay.Shapes.Cyan;
             edge.effectDistance = new Vector2(2, 2);
-            if (onClick != null) button.onClick.AddListener(onClick);
+            if (onClick != null) // the hold-to-drive buttons have no click sound
+                button.onClick.AddListener(() =>
+                {
+                    game.Sound.Click();
+                    onClick();
+                });
             var text = Label(image.transform, Middle, Vector2.zero, size, 20, TextAnchor.MiddleCenter);
             text.text = label;
             return text;

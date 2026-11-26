@@ -149,6 +149,22 @@ public class FlowTests
     }
 
     [UnityTest]
+    public IEnumerator EngineIsHeardOnlyWhileDriving()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        var engine = System.Array.Find(game.Sound.GetComponents<AudioSource>(), s => s.clip != null && s.clip.name == "engine");
+        game.StartRun();
+        yield return null;
+        yield return null;
+        Assert.Greater(engine.volume, 0);
+        game.ToMenu();
+        yield return null;
+        yield return null;
+        Assert.AreEqual(0, engine.volume);
+    }
+
+    [UnityTest]
     public IEnumerator TutorialCanBeStartedAndSkipped()
     {
         yield return null;
