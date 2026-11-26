@@ -190,6 +190,9 @@ public class CoreTests
     {
         Assert.AreEqual("com.policepursuit.game", UnityEditor.PlayerSettings.GetApplicationIdentifier(
             UnityEditor.Build.NamedBuildTarget.Android));
+        Assert.IsFalse(UpdateCheck.Newer("1.0.0", "1.0")); // Unity's default version must not be blocked
+        Assert.IsFalse(UpdateCheck.Newer("1.0", "1.0.0"));
+        Assert.IsTrue(UpdateCheck.Newer("1.0.1", "1.0"));
         Assert.IsTrue(UpdateCheck.Newer("1.10.0", "1.9.3"));
         Assert.IsFalse(UpdateCheck.Newer("1.9.3", "1.10.0"));
         Assert.IsFalse(UpdateCheck.Newer("1.0.0", "1.0.0"));

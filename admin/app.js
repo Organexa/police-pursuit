@@ -159,7 +159,7 @@ function newer(a, b) {
   const x = a.split(".").map(Number);
   const y = b.split(".").map(Number);
   for (let i = 0; i < Math.max(x.length, y.length); i++) {
-    const difference = (x[i] ?? -1) - (y[i] ?? -1);
+    const difference = (x[i] ?? 0) - (y[i] ?? 0);
     if (difference !== 0) return difference > 0;
   }
   return false;

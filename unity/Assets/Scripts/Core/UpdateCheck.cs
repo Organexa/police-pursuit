@@ -14,7 +14,7 @@ namespace PolicePursuit.Core
 
         public static void Fetch(Action<UpdateLevel, string> done)
         {
-            if (!Auth.Configured) return;
+            if (!Auth.Configured || Application.isEditor) return; // an editor run has no real version
             var request = Auth.Request("GET",
                 "/rest/v1/app_config?select=latest_version,critical_min_version,message&id=eq.1");
             request.SendWebRequest().completed += _ =>
@@ -29,8 +29,17 @@ namespace PolicePursuit.Core
         }
 
         // Numbers, not text: 1.10.0 is newer than 1.9.3. Anything unreadable is not newer, so a typo blocks nobody.
-        public static bool Newer(string candidate, string installed) =>
-            Version.TryParse(candidate, out var c) && Version.TryParse(installed, out var i) && c > i;
+        public static bool Newer(string candidate, string installed)
+        {
+            var c = Parse(candidate);
+            var i = Parse(installed);
+            return c != null && i != null && c > i;
+        }
+
+        // Missing parts count as zero: "1.0" is the same version as "1.0.0", not an older one.
+        static Version Parse(string text) => Version.TryParse(text, out var v)
+            ? new Version(v.Major, v.Minor, Math.Max(v.Build, 0), Math.Max(v.Revision, 0))
+            : null;
 
         [Serializable]
         class Rows

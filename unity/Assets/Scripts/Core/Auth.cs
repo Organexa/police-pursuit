@@ -76,8 +76,9 @@ namespace PolicePursuit.Core
     {
         // Public values, safe in the game (never a client secret or service role key).
         // While any is empty, sign-in is hidden and the rest of the game is unaffected.
-        static readonly string SupabaseUrl = "";
-        static readonly string AnonKey = "";
+        static readonly string SupabaseUrl = "https://dumwtlqllfyhbdxglsvc.supabase.co";
+        static readonly string AnonKey =
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR1bXd0bHFsbGZ5aGJkeGdsc3ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3MDgzOTIsImV4cCI6MjExMTI4NDM5Mn0.wV3hoyQmP4SRv2szu3bkzo-oOHTgJZI3e5r4Sh3weig";
         static readonly string GoogleWebClientId = "";
 
         const string JavaClass = "com.policepursuit.signin.GoogleSignIn";
