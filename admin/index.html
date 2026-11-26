@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src data:; connect-src https://*.supabase.co; base-uri 'none'; form-action 'none'">
+  <meta name="robots" content="noindex">
+  <title>Police Pursuit Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Police Pursuit Admin</h1>
+  <p id="status" role="status"></p>
+
+  <form id="login" hidden>
+    <label>Email <input name="email" type="email" autocomplete="username" required></label>
+    <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+    <button>Sign in</button>
+  </form>
+
+  <form id="mfa" hidden>
+    <div id="enroll" hidden>
+      <p>First sign-in: scan this with your authenticator app.</p>
+      <img id="qr" alt="QR code for your authenticator app" width="200" height="200">
+      <p>Or type this key: <code id="secret"></code></p>
+    </div>
+    <label>6-digit code
+      <input name="code" inputmode="numeric" autocomplete="one-time-code" pattern="\d{6}" maxlength="6" required>
+    </label>
+    <button>Verify</button>
+  </form>
+
+  <main id="panel" hidden>
+    <nav>
+      <button data-tab="dashboard">Dashboard</button>
+      <button data-tab="players">Players</button>
+      <button data-tab="scores">Scores</button>
+      <button data-tab="notice">Update notice</button>
+      <button data-tab="push">Push</button>
+      <button id="logout">Sign out</button>
+    </nav>
+
+    <section id="dashboard">
+      <dl>
+        <dt>Players</dt><dd id="playerCount">-</dd>
+        <dt>Runs uploaded today</dt><dd id="runsToday">-</dd>
+        <dt>Top score</dt><dd id="topScore">-</dd>
+      </dl>
+    </section>
+
+    <section id="players" hidden>
+      <form id="search">
+        <label>Player name <input name="q" maxlength="20"></label>
+        <button>Search</button>
+      </form>
+      <table>
+        <thead><tr><th>Name</th><th>Best score</th><th>Last seen</th></tr></thead>
+        <tbody id="playerRows"></tbody>
+      </table>
+    </section>
+
+    <section id="scores" hidden>
+      <p>The 200 highest scores, hidden ones included.</p>
+      <table>
+        <thead><tr><th>Player</th><th>Score</th><th>Car</th><th>Played</th><th>Reason</th><th></th></tr></thead>
+        <tbody id="scoreRows"></tbody>
+      </table>
+    </section>
+
+    <section id="notice" hidden>
+      <form id="noticeForm">
+        <label>Latest version (shows "Update available") <input name="latest" required></label>
+        <label>Critical minimum (older versions are blocked) <input name="critical" required></label>
+        <label>Message <textarea name="message" maxlength="300" rows="3"></textarea></label>
+        <button>Save</button>
+      </form>
+    </section>
+
+    <section id="push" hidden>
+      <form id="pushForm">
+        <label>Title <input name="title" maxlength="60" required></label>
+        <label>Message <textarea name="body" maxlength="200" rows="3" required></textarea></label>
+        <div class="preview"><strong id="previewTitle"></strong><p id="previewBody"></p></div>
+        <button>Send to all players</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

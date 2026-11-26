@@ -35,7 +35,9 @@ _Version 1.0 · 2026-11-25_
 
 ---
 
-## F1 ☐ Menu, play, pause, game over
+## F1 ◐ Menu, play, pause, game over
+_Code and tests done 2026-11-26. Open: manual 60 fps check on a mid-range phone._
+
 - **Goal:** the core loop. Main menu → run → pause → Busted → Results → menu.
 - **Tasks:**
   - Endless road built from tiles that spawn ahead and recycle behind.
@@ -53,7 +55,9 @@ _Version 1.0 · 2026-11-25_
   - Medium holds 60 fps on a mid-range phone (manual check).
 - **Tests:** EditMode: score formula. PlayMode: scripted run → damage → Busted → Results.
 
-## F2 ☐ Tutorial
+## F2 ◐ Tutorial
+_Code and tests done 2026-11-26. Open: manual first-launch check on a phone._
+
 - **Goal:** a short first run that teaches steer, drift and dodge.
 - **Done when:**
   - it starts on the first launch only;
@@ -62,7 +66,7 @@ _Version 1.0 · 2026-11-25_
   - "tutorial done" is saved in `save.json`.
 - **Tests:** EditMode: the tutorial flag saves and loads.
 
-## F3 ☐ Garage
+## F3 ◐ Garage
 - **Goal:** 5–6 original cars with speed, handling and armor stats.
 - **Done when:**
   - cars can be unlocked with coins;
@@ -71,7 +75,7 @@ _Version 1.0 · 2026-11-25_
   - each car has a `top_speed_mps` in one shared car list that `submit-score` also uses.
 - **Tests:** EditMode: unlock with enough coins works, without enough is refused.
 
-## F4 ☐ Settings
+## F4 ◐ Settings
 - **Goal:** sound, music, controls, graphics, language, privacy, account.
 - **Done when:**
   - sound and music sliders work and are saved;
@@ -83,7 +87,7 @@ _Version 1.0 · 2026-11-25_
   - all buttons are at least 48 dp.
 - **Tests:** EditMode: settings save and load.
 
-## F5 ☐ Google sign-in (optional)
+## F5 ◐ Google sign-in (optional)
 - **Goal:** sign in with Google without leaving the app.
 - **Tasks:** Android plugin (Credential Manager → Google ID token) → Supabase `grant_type=id_token`.
 - **Done when:**
@@ -93,7 +97,9 @@ _Version 1.0 · 2026-11-25_
   - sign-out works.
 - **Tests:** manual on a real phone (Google sign-in can't run in CI).
 
-## F6 ☐ Cloud save
+## F6 ◐ Cloud save
+_Code and tests done 2026-11-26. Open: Supabase setup values and a real-phone check._
+
 - **Goal:** coins, unlocked cars and best score follow the player's Google account.
 - **Done when:**
   - on sign-in the cloud save is merged: coins = max, best = max, cars = union, settings = local;
@@ -101,7 +107,9 @@ _Version 1.0 · 2026-11-25_
   - a save over 64 KB is refused by the database.
 - **Tests:** EditMode: merge rules. RLS: a player can't read another player's save.
 
-## F7 ☐ Leaderboard
+## F7 ◐ Leaderboard
+_Code and tests done 2026-11-26. Open: deploy to Supabase and a real-phone check._
+
 - **Goal:** global top 100 plus your own rank, checked by the server.
 - **Done when:**
   - the board shows top 100 names and scores;
@@ -111,7 +119,7 @@ _Version 1.0 · 2026-11-25_
   - hidden scores never show.
 - **Tests:** Deno: every accept/reject case. RLS: nobody can insert into `scores` directly.
 
-## F8 ☐ Offline play
+## F8 ◐ Offline play
 - **Goal:** the game works with no internet; scores upload later.
 - **Done when:**
   - runs go into `score_queue.json` (max 50, oldest dropped first);
@@ -120,7 +128,9 @@ _Version 1.0 · 2026-11-25_
   - a retry of the same run doesn't create a duplicate.
 - **Tests:** EditMode: queue add/limit/remove-on-OK.
 
-## F9 ☐ Ads
+## F9 ◐ Ads
+_Code and tests done 2026-11-26. Open: LevelPlay IDs and test ads on a phone._
+
 - **Goal:** rewarded ads and limited interstitials through LevelPlay.
 - **Done when:**
   - the consent choice shows first where the law requires it, and is passed to LevelPlay before any ad loads;
@@ -129,9 +139,11 @@ _Version 1.0 · 2026-11-25_
   - with no ad fill, the button is hidden;
   - "Remove ads" (F10) stops interstitials.
 - **Tests:** EditMode: the "1 in 3 runs" rule. Manual: test ads on a phone.
-- **Open item:** LevelPlay built-in consent vs Google UMP, decided during this ticket.
+- **Consent (decided 2026-11-26):** own popup, shown to everyone once, passed to LevelPlay. Revisit if AdMob is added (it requires a certified consent tool in the EEA).
 
-## F10 ☐ In-app purchases
+## F10 ◐ In-app purchases
+_Code and tests done 2026-11-26. Open: public key, Play Console products and test purchases on a phone._
+
 - **Goal:** remove ads, coin packs, premium cars, through Google Play Billing.
 - **Done when:**
   - all products are bought through Unity IAP;
@@ -140,7 +152,9 @@ _Version 1.0 · 2026-11-25_
   - a cancelled or failed purchase changes nothing.
 - **Tests:** manual with Google Play test accounts (licence testers, no real money).
 
-## F11 ☐ Update notice
+## F11 ◐ Update notice
+_Code and tests done 2026-11-26. Open: real `app_config` and phone check._
+
 - **Goal:** tell players about new versions.
 - **Done when:**
   - `latest_version` > installed → "Update available" banner;
@@ -148,7 +162,9 @@ _Version 1.0 · 2026-11-25_
   - offline → no check, normal play.
 - **Tests:** EditMode: version compare (e.g. `1.10.0` > `1.9.3`).
 
-## F12 ☐ Push notifications
+## F12 ◐ Push notifications
+_Code and tests done 2026-11-26. Open: Firebase setup and a message received on a phone._
+
 - **Goal:** daily-bonus and news messages through FCM.
 - **Done when:**
   - the game subscribes to topic `all`;
@@ -157,7 +173,9 @@ _Version 1.0 · 2026-11-25_
   - a message sent from the admin panel arrives.
 - **Tests:** Deno: `send-push` refuses non-admins and too-long text. Manual: a message arrives.
 
-## F13 ☐ Account deletion
+## F13 ◐ Account deletion
+_Code and tests done 2026-11-26. Open: deploy and phone check._
+
 - **Goal:** an in-app button that removes all online data (a Google Play rule).
 - **Done when:**
   - "Delete my account" asks to confirm, then calls `delete-account`;
@@ -166,7 +184,9 @@ _Version 1.0 · 2026-11-25_
   - a public web page explains how to request deletion (Play Console needs this link).
 - **Tests:** Deno/SQL: after the call no rows remain for that user.
 
-## F14 ☐ Admin web panel
+## F14 ◐ Admin web panel
+_Code done 2026-11-26. Open: Supabase setup, database tests and each action once on the real project._
+
 - **Goal:** your website for running the game.
 - **Done when:**
   - sign-in needs email, password and a 6-digit 2FA code;

@@ -90,7 +90,7 @@ The workflow from §5 also leaves an **encrypted** backup as a download on its r
    ```sql
    insert into admins (user_id) select id from auth.users where email = 'YOUR-EMAIL' on conflict do nothing;
    ```
-3. Open the admin panel (its link is in `PROGRESS.md`) and sign in. On the first sign-in it shows a QR code. Scan it with an authenticator app, such as Google Authenticator, and enter the 6-digit code.
+3. Put the project URL and anon key from §2 into `admin/config.js` and push. Then open the admin panel (its link is in `PROGRESS.md`) and sign in right away, so nobody else can set up 2FA first. On the first sign-in it shows a QR code. Scan it with an authenticator app, such as Google Authenticator, and enter the 6-digit code.
 4. From then on, every admin sign-in needs your password **and** a code from that app.
 
 ## 9. Google Play Console (US$25 one-time, you pay)

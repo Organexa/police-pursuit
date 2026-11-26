@@ -1,0 +1,17 @@
+:root { color-scheme: dark; }
+body { font-family: system-ui, sans-serif; background: #0a0e1a; color: #e8ecf5; max-width: 60rem; margin: 0 auto; padding: 1rem; }
+h1 { color: #00e5ff; font-size: 1.4rem; }
+[hidden] { display: none !important; }
+label { display: block; margin: 0.75rem 0; }
+input, textarea { display: block; width: 100%; max-width: 24rem; box-sizing: border-box; }
+input, textarea, button { font: inherit; color: inherit; background: #101a3a; border: 1px solid #3a4a7a; border-radius: 6px; padding: 0.6rem; }
+button { min-height: 48px; min-width: 48px; cursor: pointer; }
+button[aria-current="true"] { border-color: #00e5ff; }
+:focus-visible { outline: 2px solid #00e5ff; outline-offset: 2px; }
+nav { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+section { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.4rem; border-bottom: 1px solid #23305a; }
+dd { font-size: 2rem; margin: 0 0 1rem; }
+.preview { border: 1px dashed #3a4a7a; border-radius: 6px; padding: 0.75rem; margin: 0.75rem 0; max-width: 24rem; overflow-wrap: anywhere; }
+#status:not(:empty) { border-left: 3px solid #ff2bd6; padding-left: 0.6rem; }

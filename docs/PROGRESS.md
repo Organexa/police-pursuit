@@ -1,9 +1,47 @@
 # Progress — Police Pursuit
 
-_Last updated: 2026-11-25_
+_Last updated: 2026-11-26_
 
 ## Current phase
-**PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25). All docs written.** T0.1 scaffold done. T0.2 workflows pushed to `Organexa/police-pursuit` (public, 2026-11-25). First CI run: backend tests pass (skipped, nothing to test yet); unity tests failed (exit code 1, no license), so the unity test job now skips until `UNITY_LICENSE` exists; the build stops at "Check signing secrets" until the §5 keystore exists. Neither is a workflow bug. T0.3 Supabase schema done: RLS tests (24 pgTAP) green in CI run 45562016508. Secrets setup deferred by you. Next: F1.
+- **PRD v1.1, DESIGN v1.0, ARCHITECTURE + TRD v1.0 approved (2026-11-25).**
+- **All docs written.** T0.1 scaffold done.
+- T0.2 workflows pushed to `Organexa/police-pursuit` (public, 2026-11-25).
+- First CI run: backend tests pass (skipped, nothing to test yet); unity tests failed (exit code 1, no license), so the unity test job now skips until `UNITY_LICENSE` exists; the build stops at "Check signing secrets" until the §5 keystore exists.
+- Neither is a workflow bug.
+- T0.3 Supabase schema done: RLS tests (24 pgTAP) green in CI run 45562016508.
+- Secrets setup deferred by you.
+- F1 code done 2026-11-26: EditMode 10/10 and PlayMode 1/1 passed locally on a scratch copy in Unity 6000.6.10f1 (project pins 6000.3.29f1; not yet run in CI).
+- Tilt steering and engine audio not built.
+- F2 code done 2026-11-26: EditMode 11/11 and PlayMode 2/2 passed on the same scratch-copy setup.
+- F3 code done 2026-11-26: EditMode 13/13 and PlayMode 2/2 passed on the same scratch-copy setup.
+- Premium-car IAP waits on F10.
+- F4 code done 2026-11-26: EditMode 14/14 and PlayMode 2/2 passed on the same scratch-copy setup.
+- F4 not checked: Settings screen layout and touch, tilt and haptics on a phone (Android vibrate code is not compiled by editor tests). No audio yet, so the music volume is only saved. "Privacy & ads" (F9/F10) and "Delete my account" (F13) deferred.
+- F8 code done 2026-11-26: EditMode 15/15 and PlayMode 2/2 passed on the same scratch-copy setup. Finished runs are queued in `score_queue.json`.
+- F8 not done: upload waits on F5 (sign-in) and F7 (`submit-score`); no offline check on a phone. The F7 sender should drop runs the server rejects, or they stay queued.
+- F5 code done 2026-11-26: EditMode 16/16 and PlayMode 2/2 passed on the scratch copy. The Android Java plugin is not compiled by these tests.
+- F5 not done: Supabase project, Google OAuth web client ID, the three values in `Scripts/Core/Auth.cs` (sign-in button stays hidden until set), real-phone check.
+- F6 code done 2026-11-26: EditMode 17/17 and PlayMode 2/2 passed on the scratch copy. Best score moved from PlayerPrefs to `save.json`.
+- F6 not done: needs the F5 setup values; no real upload or download has run against Supabase.
+- F7 code done 2026-11-26: EditMode 18/18 and PlayMode 2/2 passed on the scratch copy; `submit-score` tests 6/6 passed under Node (Deno not installed here).
+- F7 not done: new migration and RLS tests not run (no Supabase CLI here, CI runs them); function never deployed (check the `../../../shared/cars.json` import bundles on first deploy); leaderboard screen not seen on a phone.
+- F8 upload is built (CloudSave); the offline phone check stays open.
+- F11 code done 2026-11-26: EditMode 19/19 and PlayMode 3/3 passed on the scratch copy. CI build version is now fixed at 1.0.0 (build.yml): raise it each release.
+- F11 not done: not tried against a real `app_config` or on a phone.
+- Package name set 2026-11-26 by `unity/Assets/Editor/PackageName.cs` (tests passed); not yet seen in a built APK.
+- Empty `Assets/Scenes/Main.unity` added to Build Settings 2026-11-26: Windows player built and ran 15 s with no errors on the scratch copy. Android build not tried (module not installed here; CI needs the §4 and §5 secrets).
+- F9 code done 2026-11-26: EditMode 20/20 and PlayMode 4/4 passed on the scratch copy (ads faked in tests). Consent: own popup shown to everyone once, answer passed to LevelPlay; no Google UMP.
+- F9 not done: LevelPlay account and the three IDs in `Scripts/Core/Ads.cs` (ads and consent stay hidden until set); Android gradle dependencies and real test ads never tried.
+- F10 code done 2026-11-26: EditMode 21/21 and PlayMode 4/4 passed on the scratch copy. Product IDs: `remove_ads`, `coins_small` (1000), `coins_medium` (5000), `coins_large` (15000), `car_phantom`; coin amounts are my pick.
+- F10 not done: Google Play public key in `Scripts/Core/Shop.cs` (shop stays hidden until set), products created in Play Console, licence-tester purchases and reinstall restore on a phone; the Android store code has never run.
+- F12 code done 2026-11-26: `send-push` tests 3/3 passed under Node; Unity EditMode 21/21 and PlayMode 4/4 passed on the scratch copy. Deviation: `firebase-messaging` Android library instead of the Firebase Unity SDK; build.yml writes its config from `GOOGLE_SERVICES_JSON`.
+- F12 not done: Firebase setup (DEPLOYMENT §3), the Java plugin has never been compiled, no message sent to a phone; messages are not shown while the game is open; sending needs the F14 admin panel.
+- F13 code done 2026-11-26: `delete-account` tests pass (all function tests 12/12 under Node); Unity EditMode 21/21 and PlayMode 4/4 passed on the scratch copy. Deletion relies on the database cascade; pgTAP check added (not run locally).
+- F13 not done: contact email added to `admin/delete-account.html` (pushing publishes the page); not deployed; no phone check.
+- F14 code done 2026-11-26: panel in `admin/` clicked through on localhost against a fake backend; pinned supabase-js loads under the page security policy; function tests 13/13 under Node. New migration `20261126000001_admin_panel.sql` (admin reads profiles, player list, last seen).
+- F14 not done: URL and anon key in `admin/config.js`; admin user (DEPLOYMENT §8); migration and pgTAP not run; never used against real Supabase. Library is version-pinned without an integrity hash.
+- Admin panel link (after push): https://organexa.github.io/police-pursuit/
+- Next: all F1–F14 code is written; what remains is setup, commit, CI and phone checks.
 
 ## Decisions so far
 | Topic | Decision |
@@ -56,7 +94,20 @@ _Last updated: 2026-11-25_
 
 ## Next
 - [ ] ◐ T0.2 CI workflows pushed; Unity tests and build wait on secrets (§4, §5, deferred)
-- [ ] F1–F14 (order in FEATURE-TICKETS.md), starting with F1
+- [ ] ◐ F1 Menu, play, pause, game over (code and tests done 2026-11-26; manual 60 fps phone check open)
+- [ ] ◐ F2 Tutorial (code and tests done 2026-11-26; manual first-launch phone check open)
+- [ ] ◐ F3 Garage (code and tests done 2026-11-26; premium IAP needs F10; manual phone check open)
+- [ ] ◐ F4 Settings (code and tests done 2026-11-26; privacy/account buttons need F9/F10/F13; manual phone check open)
+- [ ] ◐ F8 Offline play (queue and tests done 2026-11-26; upload needs F5/F7; manual offline phone check open)
+- [ ] ◐ F5 Google sign-in (code and tests done 2026-11-26; setup values and phone check open)
+- [ ] ◐ F6 Cloud save (code and tests done 2026-11-26; Supabase setup and phone check open)
+- [ ] ◐ F7 Leaderboard (code and tests done 2026-11-26; deploy and phone check open)
+- [ ] ◐ F11 Update notice (code and tests done 2026-11-26; real-backend and phone check open)
+- [ ] ◐ F9 Ads (code and tests done 2026-11-26; LevelPlay setup and phone check open)
+- [ ] ◐ F10 In-app purchases (code and tests done 2026-11-26; Play Console setup and phone check open)
+- [ ] ◐ F12 Push notifications (code and tests done 2026-11-26; Firebase setup and phone check open)
+- [ ] ◐ F13 Account deletion (code and tests done 2026-11-26; deploy and phone check open)
+- [ ] ◐ F14 Admin panel (code done 2026-11-26; Supabase setup and manual check open)
 - [ ] ◐ GitHub setup for **Organexa** (DEPLOYMENT.md), in order:
   - [x] §1 repo `police-pursuit` created, pushed, public (2026-11-25)
   - [ ] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` (unity test job skips until these exist)

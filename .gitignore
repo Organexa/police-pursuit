@@ -20,5 +20,7 @@ MemoryCaptures/
 *.ulf
 .env*
 google-services.json
+# Written by CI from the GOOGLE_SERVICES_JSON secret
+firebase.xml
 *service-account*.json
 *-sa.json

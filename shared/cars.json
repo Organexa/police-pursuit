@@ -1,0 +1,10 @@
+{
+  "cars": [
+    {"id": "starter", "name": "Neon Runner", "top_speed_mps": 30, "handling": 7.0, "armor": 0.0, "price": 0, "premium": false, "color": "00E5FF"},
+    {"id": "hatch", "name": "Alley Cat", "top_speed_mps": 31, "handling": 8.5, "armor": 0.0, "price": 500, "premium": false, "color": "7CFF4F"},
+    {"id": "muscle", "name": "Night Brute", "top_speed_mps": 34, "handling": 6.5, "armor": 0.2, "price": 1500, "premium": false, "color": "FF8A1F"},
+    {"id": "sport", "name": "Volt GT", "top_speed_mps": 37, "handling": 8.0, "armor": 0.1, "price": 3500, "premium": false, "color": "FFE600"},
+    {"id": "tank", "name": "Iron Ox", "top_speed_mps": 32, "handling": 6.0, "armor": 0.4, "price": 5000, "premium": false, "color": "9AA4B2"},
+    {"id": "phantom", "name": "Phantom X", "top_speed_mps": 40, "handling": 9.0, "armor": 0.25, "price": 0, "premium": true, "color": "B14CFF"}
+  ]
+}
