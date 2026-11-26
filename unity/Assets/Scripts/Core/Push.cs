@@ -57,7 +57,8 @@ namespace PolicePursuit.Core
 
             public Callback(Push push) : base(JavaClass + "$Callback") => this.push = push;
 
-            // Method name must match the Java interface.
+            // Method name must match the Java interface. Only Java calls it, so keep it from being stripped.
+            [UnityEngine.Scripting.Preserve]
             void onToken(string token) => push.token = token;
         }
     }

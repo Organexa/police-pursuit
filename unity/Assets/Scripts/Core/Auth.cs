@@ -90,6 +90,7 @@ namespace PolicePursuit.Core
             && Configured && GoogleWebClientId != "";
         public bool Busy { get; private set; }
         public bool Failed { get; private set; }
+        public string FailReason { get; private set; } // shown under the sign-in button
         public AuthSession Session { get; private set; }
         public bool SignedIn => Session != null;
 
@@ -186,7 +187,7 @@ namespace PolicePursuit.Core
         void OnGoogle()
         {
             if (!string.IsNullOrEmpty(error)) { Fail(error); return; }
-            if (string.IsNullOrEmpty(idToken)) { Busy = false; return; } // cancelled: stay a guest
+            if (string.IsNullOrEmpty(idToken)) { Busy = false; return; } // no token, no error: stay a guest
             var request = Request("POST", "/auth/v1/token?grant_type=id_token",
                 JsonUtility.ToJson(new IdTokenBody { id_token = idToken, nonce = nonce }));
             idToken = null;
@@ -240,6 +241,7 @@ namespace PolicePursuit.Core
             Debug.LogWarning("Sign-in failed: " + reason);
             Busy = false;
             Failed = true;
+            FailReason = reason;
         }
 
         // A Supabase request with the public key; add the Authorization header for the player's own rows.
@@ -281,7 +283,8 @@ namespace PolicePursuit.Core
 
             public Callback(Auth auth) : base(JavaClass + "$Callback") => this.auth = auth;
 
-            // Method name must match the Java interface.
+            // Method name must match the Java interface. Only Java calls it, so keep it from being stripped.
+            [UnityEngine.Scripting.Preserve]
             void onResult(string idToken, string error)
             {
                 auth.idToken = idToken;

@@ -22,7 +22,7 @@ namespace PolicePursuit.UI
         GameObject menu, hud, pause, settings, busted, results, skip, garage, board, updateBanner, updateScreen, consent, continueButton, doubleButton, shop, deleteButton, deleteScreen, deleteConfirm;
         RectTransform healthFill;
         Text coinsText, distanceText, scoreText, popup, menuText, resultText, presetText, tutorialText,
-            carText, carCoins, carButton, signInText, boardText, rankText, updateText, continueText, deleteText;
+            carText, carCoins, carButton, signInText, boardText, rankText, updateText, continueText, deleteText, signInProblem;
         ScrollRect boardScroll;
         readonly RectTransform[] statFills = new RectTransform[3];
         int carIndex;
@@ -108,6 +108,8 @@ namespace PolicePursuit.UI
         void Update()
         {
             if (game == null) return;
+            if (game.State == GameState.Menu)
+                signInProblem.text = game.Auth.Failed && !game.Auth.SignedIn ? game.Auth.FailReason : "";
             if (game.State == GameState.Menu)
                 signInText.text = game.Auth.Busy ? "Signing in..." : game.Auth.SignedIn ? "Sign out"
                     : game.Auth.Failed ? "Retry sign-in" : "Sign in with Google";
@@ -201,6 +203,9 @@ namespace PolicePursuit.UI
                 else game.Auth.SignIn();
             });
             signInText.transform.parent.gameObject.SetActive(game.Auth.Available);
+            signInProblem = Label(menu.transform, Middle, new Vector2(0, -207), new Vector2(780, 32), 12,
+                TextAnchor.MiddleCenter);
+            signInProblem.supportRichText = false;
 
             pause = Panel(safe, "Pause", dim);
             Title(pause, "PAUSED", 160);
