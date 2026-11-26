@@ -47,6 +47,8 @@ jobs:
         with:
           projectPath: unity
           unityVersion: 6000.3.29f1
+          # GameCI publishes no version 3 images (the action default) for this Unity release.
+          containerRegistryImageVersion: 4
           targetPlatform: Android
           buildName: PolicePursuit
           androidExportType: ${{ matrix.exportType }}
