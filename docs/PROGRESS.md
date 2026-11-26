@@ -124,6 +124,7 @@ _Last updated: 2026-11-26_
   - [x] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` (2026-11-26; license expires 2026-12-24)
   - [ ] §5 secrets `GH_SECRETS_TOKEN`, `KEYSTORE_BACKUP_PASSPHRASE`, then run **create-keystore**
   - [ ] §6 download the encrypted `keystore-backup` (kept 1 day)
-  - [ ] §2 (later, T0.3) secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` (Settings → Secrets and variables → Actions → Variables)
+  - [x] §2 secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` (added by you 2026-11-27; keep-alive run 45890653333 reached Supabase, so the variables work; the three secrets are untested until the first deploy)
+  - [x] §8 admin user added 2026-11-27 (a separate email-and-password account, listed in `admins`); signed in to the panel run on this PC and set up 2FA (verified in Supabase). Not checked: the panel's tabs against real data.
 - [ ] Supabase setup (DEPLOYMENT §2) — I'll say when it's needed
 - [ ] Test, deploy, handover
