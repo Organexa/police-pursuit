@@ -165,6 +165,27 @@ public class FlowTests
     }
 
     [UnityTest]
+    public IEnumerator MusicFollowsItsOwnSlider()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        var bass = System.Array.Find(game.Sound.GetComponents<AudioSource>(),
+            s => s.clip != null && s.clip.name == "music-bass");
+        Assert.IsTrue(bass.ignoreListenerVolume);
+        var before = game.Settings;
+        game.ToMenu();
+        game.ApplySettings(new SaveData { musicVolume = 1, soundVolume = 0 });
+        yield return null;
+        yield return null;
+        Assert.Greater(bass.volume, 0);
+        game.ApplySettings(new SaveData { musicVolume = 0 });
+        yield return null;
+        yield return null;
+        Assert.AreEqual(0, bass.volume);
+        game.ApplySettings(before);
+    }
+
+    [UnityTest]
     public IEnumerator TutorialCanBeStartedAndSkipped()
     {
         yield return null;

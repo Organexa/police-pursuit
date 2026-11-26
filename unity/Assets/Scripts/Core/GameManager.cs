@@ -263,8 +263,7 @@ namespace PolicePursuit.Core
             Buzz();
         }
 
-        // shortcut: there is no music yet, so "Sound" is the master volume and "Music" is only saved;
-        // split into mixer groups when music is added.
+        // "Sound" is the listener volume; the music sources ignore it and follow "Music" (see Sound).
         public void ApplySettings(SaveData s)
         {
             Settings = s;

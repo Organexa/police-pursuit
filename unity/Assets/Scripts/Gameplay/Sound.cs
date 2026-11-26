@@ -5,17 +5,26 @@ using Random = System.Random;
 
 namespace PolicePursuit.Gameplay
 {
-    // Sound effects (DESIGN §9), synthesised so there are no audio files or licences.
-    // The Settings "Sound" slider is the master volume; pausing the game pauses everything but button clicks.
-    // shortcut: placeholder synth sounds and no music yet; swap for recorded clips with the art pass.
+    // Sound effects and music (DESIGN §9), synthesised so there are no audio files or licences.
+    // "Sound" (the listener volume) covers effects, "Music" the music; pausing the game pauses all but button clicks.
+    // shortcut: placeholder synth sounds and one 8-second tune; swap for recorded tracks with the art pass.
     public class Sound : MonoBehaviour
     {
         public const int Rate = 22050;
+        public const float MusicSeconds = 8; // four bars at 120 beats a minute
         const float SirenRange = 60f; // metres
 
         GameManager game;
         AudioSource engine, siren, effects, ui;
         AudioClip crash, coin, whoosh, click;
+        readonly AudioSource[] music = new AudioSource[3];
+
+        // Layer 0 (bass and kick) always plays; drums join at two stars and the lead at three, only while driving.
+        public static float MusicGain(int layer, int wanted, bool driving) =>
+            layer == 0 ? 0.35f
+            : !driving ? 0
+            : layer == 1 ? (wanted >= 2 ? 0.25f : 0)
+            : wanted >= 3 ? 0.12f + 0.04f * (wanted - 3) : 0;
 
         public static float EnginePitch(float speed, float topSpeed) =>
             Mathf.Lerp(0.8f, 2f, topSpeed > 0 ? speed / topSpeed : 0);
@@ -31,6 +40,15 @@ namespace PolicePursuit.Gameplay
             effects = Source(null, false);
             ui = Source(null, false);
             ui.ignoreListenerPause = true; // buttons on the pause screen still click
+
+            var layers = new[] { Clip("music-bass", MusicSeconds, Bass), Clip("music-drums", MusicSeconds, Drums()),
+                Clip("music-lead", MusicSeconds, Lead) };
+            // Same length and started in the same frame, so they stay in step.
+            for (int i = 0; i < music.Length; i++)
+            {
+                music[i] = Source(layers[i], true);
+                music[i].ignoreListenerVolume = true; // has its own slider
+            }
 
             crash = Clip("crash", 0.4f, Crash());
             coin = Clip("coin", 0.18f, Coin);
@@ -51,6 +69,8 @@ namespace PolicePursuit.Gameplay
             engine.volume = driving ? 0.25f : 0;
             engine.pitch = EnginePitch(car.Speed, car.TopSpeed);
             siren.volume = driving ? 0.35f * SirenVolume(game.Traffic.NearestCop(car.transform.position)) : 0;
+            for (int i = 0; i < music.Length; i++)
+                music[i].volume = game.Settings.musicVolume * MusicGain(i, game.Wanted, driving);
         }
 
         AudioSource Source(AudioClip loop, bool looping)
@@ -90,6 +110,50 @@ namespace PolicePursuit.Gameplay
         // 750 Hz swinging by 150 Hz once a second (the phase is the integral of that frequency).
         public static float Siren(float t) =>
             0.6f * Mathf.Sin(2 * Mathf.PI * 750 * t + 150 * (1 - Mathf.Cos(2 * Mathf.PI * t)));
+
+        // A minor, F, C, G: one chord per two-second bar (root in Hz, semitones to its third).
+        static readonly (float root, int third)[] Chords = { (110f, 3), (87.31f, 4), (130.81f, 4), (98f, 4) };
+
+        static (float root, int third) Chord(float t) => Chords[(int)(t / 2) % Chords.Length];
+
+        // Every note fades in and out inside its own slot, so neither notes nor the loop point click.
+        static float Note(float t, float length)
+        {
+            float into = t % length;
+            return Mathf.Min(1, into / 0.005f) * (1 - into / length);
+        }
+
+        // Eighth-note bass with a kick drum on every beat.
+        public static float Bass(float t)
+        {
+            float root = Chord(t).root, into = t % 0.25f, beat = t % 0.5f;
+            float bass = (Tone(root, into) + 0.5f * Tone(2 * root, into) + 0.25f * Tone(3 * root, into)) * Note(t, 0.25f);
+            // The pitch drops from 120 Hz to 50 Hz: the phase is the integral of that fall.
+            float kick = Mathf.Sin(2 * Mathf.PI * (50 * beat + 70 * (1 - Mathf.Exp(-30 * beat)) / 30)) * Note(t, 0.5f);
+            return 0.35f * bass + 0.6f * kick * Mathf.Exp(-10 * beat);
+        }
+
+        // Snare on beats two and four, hi-hat between the beats.
+        public static Func<float, float> Drums()
+        {
+            var random = new Random(3);
+            return t =>
+            {
+                float noise = (float)(random.NextDouble() * 2 - 1);
+                float snare = (t + 0.5f) % 1f, hat = (t + 0.25f) % 0.5f;
+                return noise * (0.6f * Mathf.Exp(-18 * snare) + 0.35f * Mathf.Exp(-60 * hat)) * Note(t, 0.25f);
+            };
+        }
+
+        // Sixteenth-note arpeggio two octaves above the bass.
+        public static float Lead(float t)
+        {
+            var chord = Chord(t);
+            int step = (int)(t / 0.125f) % 4;
+            int semitones = step == 0 ? 0 : step == 1 ? chord.third : step == 2 ? 7 : 12;
+            float hz = 4 * chord.root * Mathf.Pow(2, semitones / 12f), into = t % 0.125f;
+            return (0.6f * Tone(hz, into) + 0.2f * Tone(2 * hz, into)) * Note(t, 0.125f);
+        }
 
         static float Coin(float t) => 0.6f * Tone(t < 0.06f ? 990 : 1320, t) * (1 - t / 0.18f);
 

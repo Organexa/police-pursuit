@@ -259,6 +259,25 @@ public class CoreTests
     }
 
     [Test]
+    public void MusicLayersFollowTheWantedLevel()
+    {
+        foreach (var wave in new Func<float, float>[] { Sound.Bass, Sound.Drums(), Sound.Lead })
+        {
+            var samples = Sound.Samples(Sound.MusicSeconds, wave);
+            Assert.AreEqual(0f, samples[0], 0.01f); // quiet at both ends: no click when it loops
+            Assert.AreEqual(0f, samples[samples.Length - 1], 0.05f);
+            Assert.Greater(Array.FindAll(samples, s => Mathf.Abs(s) > 0.05f).Length, samples.Length / 20);
+        }
+        Assert.Greater(Sound.MusicGain(0, 1, false), 0); // the menu has the bass line
+        Assert.AreEqual(0f, Sound.MusicGain(1, 5, false));
+        Assert.AreEqual(0f, Sound.MusicGain(1, 1, true));
+        Assert.Greater(Sound.MusicGain(1, 2, true), 0);
+        Assert.AreEqual(0f, Sound.MusicGain(2, 2, true));
+        Assert.Greater(Sound.MusicGain(2, 3, true), 0);
+        Assert.Greater(Sound.MusicGain(2, 5, true), Sound.MusicGain(2, 3, true));
+    }
+
+    [Test]
     public void ScoreQueueLimitAndRemove()
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
