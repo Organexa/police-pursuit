@@ -48,7 +48,8 @@ _Last updated: 2026-11-26_
 - Privacy policy drafted 2026-11-26 at `admin/privacy.html` (for Play Console; needs your review; published only when `admin/` reaches `main`). It discloses that Google sign-in stores name and picture link, which SECURITY §5 does not list yet.
 - Sound effects added 2026-11-26 (`Gameplay/Sound.cs`, synthesised: engine, police siren by distance, crash, coin, near miss, button click). EditMode 22/22, PlayMode 7/7 on the scratch copy; nobody has listened to it yet. Music added the same day: an 8-second synthesised tune (bass in the menu; drums from 2 wanted stars, lead from 3) with its own slider. EditMode 23/23, PlayMode 8/8; still not listened to.
 - Supabase live 2026-11-26: project `police-pursuit` (ref `dumwtlqllfyhbdxglsvc`, Mumbai, free) in Organexa Tech; `neon-racers` was paused to make room. 3 migrations applied (history versions aligned with the repo files) and 3 functions deployed through the connector; anonymous probes behaved (public reads OK, private reads and writes refused). URL and anon key are in `Auth.cs` and `admin/config.js`. Open: Google client ID, admin user + 2FA, `FIREBASE_SERVICE_ACCOUNT`, GitHub secrets/variables (DEPLOYMENT §2) for CI deploys and keep-alive (free projects pause after about a week idle). Also fixed: version `1.0` was treated as older than `1.0.0`.
-- Next: all F1–F14 code is written; what remains is a phone check, setup, merging to `main` and the signed release build.
+- Phone check 2026-11-26: you reported the latest APK (12f9ad8) works. Not itemised: 60 fps on a mid-range phone, tilt, haptics, first-launch tutorial, offline queue.
+- Next: all F1–F14 code is written; what remains is the detailed phone checks, setup, merging to `main` and the signed release build.
 
 ## Decisions so far
 | Topic | Decision |
