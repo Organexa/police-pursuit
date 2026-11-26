@@ -1,0 +1,8 @@
+{
+    "name": "PolicePursuit.Tests.PlayMode",
+    "references": ["PolicePursuit.Runtime", "UnityEngine.TestRunner", "UnityEngine.UI"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

@@ -90,7 +90,7 @@ The workflow from §5 also leaves an **encrypted** backup as a download on its r
    ```sql
    insert into admins (user_id) select id from auth.users where email = 'YOUR-EMAIL' on conflict do nothing;
    ```
-3. Open the admin panel (its link is in `PROGRESS.md`) and sign in. On the first sign-in it shows a QR code. Scan it with an authenticator app, such as Google Authenticator, and enter the 6-digit code.
+3. Put the project URL and anon key from §2 into `admin/config.js` and push. Then open the admin panel (its link is in `PROGRESS.md`) and sign in right away, so nobody else can set up 2FA first. On the first sign-in it shows a QR code. Scan it with an authenticator app, such as Google Authenticator, and enter the 6-digit code.
 4. From then on, every admin sign-in needs your password **and** a code from that app.
 
 ## 9. Google Play Console (US$25 one-time, you pay)
@@ -102,13 +102,35 @@ The workflow from §5 also leaves an **encrypted** backup as a download on its r
 3. **Closed testing first:**
    - New personal accounts must run a closed test before they can publish to everyone.
    - The current rule is at least 12 testers for 14 days. Check the Console for the exact numbers when you get there.
-   - Upload the `.aab` from the GitHub Release.
+   - Upload the `.aab` from the GitHub Release (made when a `v*` tag is pushed; I'll do that when you say).
 4. Fill the **Data safety** form with the answers in `SECURITY-AND-ACCESS.md` §5.
 5. For the **account deletion URL**, use `https://<your-github-name>.github.io/police-pursuit/delete-account.html`.
 6. **Privacy policy URL:** `https://<your-github-name>.github.io/police-pursuit/privacy.html`. I'll write this page.
 7. Content rating questionnaire:
    - Answer honestly. The game has cartoon-style car crashes and police chases, with no blood.
    - Turn on **Play App Signing**. It's the default.
+
+## 9a. LevelPlay (ads, free)
+Ads and the consent popup stay hidden until all three values below are filled in.
+1. Sign up for Unity LevelPlay and add an **Android app** with the package name `com.policepursuit.game`.
+2. Create one **rewarded** ad unit and one **interstitial** ad unit.
+3. Send me the **app key** and the two **ad unit IDs**. They are public values that ship inside the app.
+4. Use LevelPlay's test mode or a registered test device while testing. Tapping your own live ads can get the account banned.
+5. Check LevelPlay's own Data Safety guidance and compare it with `SECURITY-AND-ACCESS.md` §5.
+
+## 9b. Values that go into the code
+All are public by design. Each feature stays hidden or off while its values are empty.
+
+| Value | From | Goes into |
+|---|---|---|
+| Supabase project URL, anon key | §2 | `unity/Assets/Scripts/Core/Auth.cs` and `admin/config.js` |
+| Google **web** client ID | §7 | `Auth.cs` |
+| LevelPlay app key, rewarded ID, interstitial ID | §9a | `unity/Assets/Scripts/Core/Ads.cs` |
+| Google Play public licensing key (Play Console → Monetize → Licensing) | §9 | `unity/Assets/Scripts/Core/Shop.cs` |
+
+**Never** send or commit a service role key, client secret, private key or password.
+
+In Play Console, also create these in-app products: `remove_ads`, `coins_small`, `coins_medium`, `coins_large`, `car_phantom`.
 
 ## 10. iOS (optional, not in v1)
 - iOS needs an Apple Developer account, which costs US$99 a year.

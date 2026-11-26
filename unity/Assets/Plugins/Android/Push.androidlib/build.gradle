@@ -1,0 +1,11 @@
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.policepursuit.push'
+    compileSdk 34
+    defaultConfig { minSdk 24 }
+}
+
+dependencies {
+    implementation 'com.google.firebase:firebase-messaging:24.1.0'
+}

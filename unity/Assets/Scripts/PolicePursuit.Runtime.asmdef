@@ -1,0 +1,16 @@
+{
+    "name": "PolicePursuit.Runtime",
+    "rootNamespace": "PolicePursuit",
+    "references": [
+        "Unity.InputSystem",
+        "Unity.LevelPlay",
+        "Unity.Purchasing",
+        "Unity.Purchasing.Security",
+        "Unity.Purchasing.SecurityStub",
+        "Unity.Purchasing.SecurityCore",
+        "UnityEngine.UI",
+        "Unity.RenderPipelines.Universal.Runtime",
+        "Unity.RenderPipelines.Core.Runtime"
+    ],
+    "autoReferenced": true
+}

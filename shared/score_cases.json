@@ -1,0 +1,13 @@
+{
+  "_comment": "score = floor(distance_m) + near_misses*250 + floor(duration_s*max_wanted*10). Same as supabase init.sql and TRD.md. Client and server tests both read this file.",
+  "cases": [
+    { "distance_m": 0, "near_misses": 0, "duration_s": 0, "max_wanted": 1, "expected": 0 },
+    { "distance_m": 100.9, "near_misses": 0, "duration_s": 10, "max_wanted": 1, "expected": 200 },
+    { "distance_m": 500.25, "near_misses": 2, "duration_s": 30.5, "max_wanted": 5, "expected": 2525 },
+    { "distance_m": 999.99, "near_misses": 10, "duration_s": 120.75, "max_wanted": 2, "expected": 5914 },
+    { "distance_m": 0.5, "near_misses": 0, "duration_s": 0.05, "max_wanted": 1, "expected": 0 },
+    { "distance_m": 200000, "near_misses": 7200, "duration_s": 3600, "max_wanted": 5, "expected": 2180000 },
+    { "distance_m": 1234.56, "near_misses": 3, "duration_s": 65.5, "max_wanted": 3, "expected": 3949 },
+    { "distance_m": 0, "near_misses": 0, "duration_s": 0.1, "max_wanted": 3, "expected": 3 }
+  ]
+}

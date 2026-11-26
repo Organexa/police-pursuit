@@ -14,7 +14,7 @@ _Version 1.0 · 2026-11-25 · Status: **Approved 2026-11-25** (together with ARC
 | Camera | Cinemachine 3 |
 | Ads | `com.unity.services.levelplay` |
 | Purchases | `com.unity.purchasing` (Unity IAP) |
-| Push | Firebase Cloud Messaging Unity SDK (`FirebaseMessaging.unitypackage`, only the Messaging module) |
+| Push | `firebase-messaging` (Gradle) in a small Android library, `Plugins/Android/Push.androidlib`; CI writes its config from `GOOGLE_SERVICES_JSON` |
 | JSON | `com.unity.nuget.newtonsoft-json` |
 | Tests | Unity Test Framework (EditMode + PlayMode) |
 | Sign-in plugin | Small Java/Kotlin Android plugin using AndroidX Credential Manager + Google ID library |
@@ -43,14 +43,14 @@ All functions require a signed-in user's token (`Authorization: Bearer <jwt>`) a
 
 ### `submit-score`
 - **Input:** `{ duration_s, distance_m, near_misses, max_wanted, car_id, played_at }`
-- **Checks (any failure → `400 { ok: false, reason }`, nothing written):**
+- **Checks (any failure of 1–6 → `400 { ok: false, reason }`, nothing written):**
   1. All fields present, numbers, not negative.
   2. `car_id` is a known car.
   3. `distance_m ≤ car_top_speed_mps × duration_s × 1.1` (10% margin for boosts).
   4. `near_misses ≤ duration_s × 2` and `max_wanted` between 1 and 5.
   5. `duration_s ≤ 3600`.
   6. `played_at` is within the last 7 days and not in the future (+5 min margin).
-  7. Rate limit: max 30 scores per player per hour.
+  7. Rate limit: max 30 scores per player per hour, by upload time (`created_at`). This one returns `429`, so the game keeps the run and sends it later.
 - **On success:** recomputes the score server-side, inserts the row, returns `200 { ok: true, score }`.
 - A duplicate (same user + `played_at`) returns `ok: true` without inserting again, so the offline queue can retry safely.
 
@@ -103,7 +103,7 @@ score = floor(distance_m × 1)
 | File | Runs when | Does |
 |---|---|---|
 | `test.yml` | every push / pull request | Unity EditMode + PlayMode tests, Edge Function tests, RLS tests |
-| `build.yml` | push to `main` and version tags | Builds a signed APK + AAB, attaches them to a GitHub Release |
+| `build.yml` | push to `main` and version tags | Builds a signed APK + AAB as run artifacts; a `v*` tag also attaches them to a GitHub Release |
 | `deploy-backend.yml` | push to `main` that changes `/supabase` | Applies migrations, deploys Edge Functions |
 | `deploy-admin.yml` | push to `main` that changes `/admin` | Publishes the admin panel to GitHub Pages |
 | `keep-alive.yml` | every 3 days (schedule) | Reads `app_config` so Supabase doesn't pause |

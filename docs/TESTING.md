@@ -59,7 +59,7 @@ These run as real database roles (`anon`, a signed-in player, a second player, a
 | `anon` reads `leaderboard` and `app_config` | Allowed |
 
 ## 3. Manual checks on a phone
-Done once per release with a test build from the GitHub Release. I'll send you the list for each release; it takes about 15 minutes.
+Done once per release with a test build from the build run's downloads (or the GitHub Release for a `v*` tag). I'll send you the list for each release; it takes about 15 minutes.
 
 - [ ] Install and first launch: the tutorial starts and can be skipped.
 - [ ] A full run reaches Results; pause works.

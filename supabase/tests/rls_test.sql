@@ -1,7 +1,7 @@
 -- RLS matrix (TESTING §2.4). Runs in CI via `supabase test db`.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(24);
+select plan(29);
 
 -- Fixtures (as postgres). Trigger creates the profiles.
 insert into auth.users (id, email) values
@@ -54,6 +54,10 @@ select is((select display_name from public.profiles where id = '00000000-0000-00
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c","role":"authenticated","aal":"aal1"}', true);
 select is_empty($$select 1 from public.admins$$, 'aal1 admin cannot read admins');
+select is_empty($$select 1 from public.profiles where id <> '00000000-0000-0000-0000-00000000000c'$$,
+  'aal1 admin cannot read other profiles');
+select is_empty($$select 1 from public.admin_players where id <> '00000000-0000-0000-0000-00000000000c'$$,
+  'aal1 admin sees no other players');
 update public.scores set hidden = true where user_id = '00000000-0000-0000-0000-00000000000a';
 update public.app_config set message = 'aal1' where id = 1;
 reset role;
@@ -65,6 +69,8 @@ select is((select message from public.app_config), null, 'aal1 admin cannot edit
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000000c","role":"authenticated","aal":"aal2"}', true);
 select isnt_empty($$select 1 from public.admins$$, 'aal2 admin reads admins');
+select isnt_empty($$select 1 from public.admin_players where display_name = 'PlayerA' and best_score is not null$$,
+  'aal2 admin sees players and their best score');
 update public.app_config set message = 'aal2' where id = 1;
 update public.scores set hidden_reason = 'checked' where user_id = '00000000-0000-0000-0000-00000000000a';
 reset role;
@@ -75,12 +81,22 @@ select is((select hidden_reason from public.scores where user_id = '00000000-000
 -- Anonymous
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select throws_ok($$select 1 from public.admin_players$$, '42501', null, 'anon cannot read the player list');
 select isnt_empty($$select 1 from public.leaderboard$$, 'anon reads leaderboard');
 select isnt_empty($$select 1 from public.app_config$$, 'anon reads app_config');
 select is_empty($$select 1 from public.leaderboard where display_name = 'PlayerB'$$, 'hidden score not on leaderboard');
 select throws_ok($$insert into public.scores (user_id, duration_s, distance_m, near_misses, max_wanted, car_id, played_at)
   values ('00000000-0000-0000-0000-00000000000a', 1, 1, 0, 1, 'x', now())$$, '42501', null, 'anon cannot insert scores');
 reset role;
+
+-- Account deletion (delete-account removes the auth user): nothing of theirs stays.
+delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
+select is((
+  (select count(*) from public.profiles where id = '00000000-0000-0000-0000-00000000000b')
+  + (select count(*) from public.scores where user_id = '00000000-0000-0000-0000-00000000000b')
+  + (select count(*) from public.saves where user_id = '00000000-0000-0000-0000-00000000000b')
+  + (select count(*) from public.push_tokens where user_id = '00000000-0000-0000-0000-00000000000b')
+), 0::bigint, 'deleting the auth user removes every row');
 
 select * from finish();
 rollback;
