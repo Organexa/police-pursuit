@@ -103,7 +103,7 @@ score = floor(distance_m × 1)
 | File | Runs when | Does |
 |---|---|---|
 | `test.yml` | every push / pull request | Unity EditMode + PlayMode tests, Edge Function tests, RLS tests |
-| `build.yml` | push to `main` and version tags | Builds a signed APK + AAB, attaches them to a GitHub Release |
+| `build.yml` | push to `main` and version tags | Builds a signed APK + AAB as run artifacts; a `v*` tag also attaches them to a GitHub Release |
 | `deploy-backend.yml` | push to `main` that changes `/supabase` | Applies migrations, deploys Edge Functions |
 | `deploy-admin.yml` | push to `main` that changes `/admin` | Publishes the admin panel to GitHub Pages |
 | `keep-alive.yml` | every 3 days (schedule) | Reads `app_config` so Supabase doesn't pause |

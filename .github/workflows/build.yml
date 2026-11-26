@@ -70,6 +70,8 @@ jobs:
           if-no-files-found: error
 
   release:
+    # A public download only when a version tag is pushed; builds of main stay as run artifacts.
+    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     permissions:

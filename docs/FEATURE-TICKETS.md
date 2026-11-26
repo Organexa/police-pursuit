@@ -24,7 +24,7 @@ _Version 1.0 · 2026-11-25_
   - Write `test.yml`, `build.yml`, `deploy-backend.yml`, `deploy-admin.yml`, `keep-alive.yml`, `create-keystore.yml` (TRD §8).
 - **Done when:**
   - a push runs the tests;
-  - `main` produces a signed APK + AAB on a GitHub Release;
+  - `main` produces a signed APK + AAB (a GitHub Release only for a `v*` tag);
   - no secret value appears in any log.
 
 ### T0.3 ☑ Supabase schema

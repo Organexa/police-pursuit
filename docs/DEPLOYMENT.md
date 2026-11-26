@@ -102,7 +102,7 @@ The workflow from §5 also leaves an **encrypted** backup as a download on its r
 3. **Closed testing first:**
    - New personal accounts must run a closed test before they can publish to everyone.
    - The current rule is at least 12 testers for 14 days. Check the Console for the exact numbers when you get there.
-   - Upload the `.aab` from the GitHub Release.
+   - Upload the `.aab` from the GitHub Release (made when a `v*` tag is pushed; I'll do that when you say).
 4. Fill the **Data safety** form with the answers in `SECURITY-AND-ACCESS.md` §5.
 5. For the **account deletion URL**, use `https://<your-github-name>.github.io/police-pursuit/delete-account.html`.
 6. **Privacy policy URL:** `https://<your-github-name>.github.io/police-pursuit/privacy.html`. I'll write this page.
