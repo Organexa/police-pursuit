@@ -30,7 +30,9 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.ready.outputs.go == 'true'
         with:
-          version: latest
+          # shortcut: pinned to the last 2.x. CLI v3 targets a local database by default and wants
+          # --remote and --yes; change the commands below when moving to it.
+          version: 2.122.1
       - name: Apply migrations and deploy functions
         if: steps.ready.outputs.go == 'true'
         run: |
