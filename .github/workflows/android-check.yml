@@ -6,6 +6,7 @@ on:
   push:
     branches-ignore: [main]
     paths: ['unity/**', '.github/workflows/android-check.yml']
+  workflow_dispatch: # to rebuild after a secret changes, with no code change
 
 permissions:
   contents: read
