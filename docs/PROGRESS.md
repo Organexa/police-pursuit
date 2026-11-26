@@ -41,7 +41,8 @@ _Last updated: 2026-11-26_
 - F14 code done 2026-11-26: panel in `admin/` clicked through on localhost against a fake backend; pinned supabase-js loads under the page security policy; function tests 13/13 under Node. New migration `20261126000001_admin_panel.sql` (admin reads profiles, player list, last seen).
 - F14 not done: URL and anon key in `admin/config.js`; admin user (DEPLOYMENT §8); migration and pgTAP not run; never used against real Supabase. Library is version-pinned without an integrity hash.
 - Admin panel link (after push): https://organexa.github.io/police-pursuit/
-- Next: all F1–F14 code is written; what remains is setup, commit, CI and phone checks.
+- Pushed to branch `feat/f1-f14` 2026-11-26. CI run 45814665192: Deno function tests and database (pgTAP) tests passed, so the earlier "not run" notes for those are closed. Unity tests skipped (no `UNITY_LICENSE` secret).
+- Next: all F1–F14 code is written; what remains is setup, merging to `main`, a CI build and phone checks.
 
 ## Decisions so far
 | Topic | Decision |
