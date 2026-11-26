@@ -20,7 +20,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 // Called from Core/Auth.cs.
 public final class GoogleSignIn {
     public interface Callback {
-        // Both null means the player cancelled.
+        // Both empty means the player cancelled.
         void onResult(String idToken, String error);
     }
 
@@ -43,11 +43,11 @@ public final class GoogleSignIn {
                             @Override
                             public void onError(GetCredentialException e) {
                                 boolean cancelled = e instanceof GetCredentialCancellationException;
-                                callback.onResult(null, cancelled ? null : e.toString());
+                                send(callback, null, cancelled ? null : e.toString());
                             }
                         });
             } catch (Exception e) {
-                callback.onResult(null, e.toString());
+                send(callback, null, e.toString());
             }
         });
     }
@@ -65,17 +65,23 @@ public final class GoogleSignIn {
                 });
     }
 
+    // Never pass null to Unity: its Java proxy cannot match the C# method for a null argument, and the
+    // answer is then lost without a word.
+    private static void send(Callback callback, String idToken, String error) {
+        callback.onResult(idToken == null ? "" : idToken, error == null ? "" : error);
+    }
+
     private static void deliver(Credential credential, Callback callback) {
         try {
             if (credential instanceof CustomCredential
                     && GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(credential.getType())) {
                 CustomCredential custom = (CustomCredential) credential;
-                callback.onResult(GoogleIdTokenCredential.createFrom(custom.getData()).getIdToken(), null);
+                send(callback, GoogleIdTokenCredential.createFrom(custom.getData()).getIdToken(), null);
             } else {
-                callback.onResult(null, "unexpected credential type");
+                send(callback, null, "unexpected credential type");
             }
         } catch (Exception e) {
-            callback.onResult(null, e.toString());
+            send(callback, null, e.toString());
         }
     }
 }

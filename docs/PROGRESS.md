@@ -50,6 +50,7 @@ _Last updated: 2026-11-26_
 - Supabase live 2026-11-26: project `police-pursuit` (ref `dumwtlqllfyhbdxglsvc`, Mumbai, free) in Organexa Tech; `neon-racers` was paused to make room. 3 migrations applied (history versions aligned with the repo files) and 3 functions deployed through the connector; anonymous probes behaved (public reads OK, private reads and writes refused). URL and anon key are in `Auth.cs` and `admin/config.js`. Open: Google client ID, admin user + 2FA, `FIREBASE_SERVICE_ACCOUNT`, GitHub secrets/variables (DEPLOYMENT §2) for CI deploys and keep-alive (free projects pause after about a week idle). Also fixed: version `1.0` was treated as older than `1.0.0`.
 - Phone check 2026-11-26: you reported the latest APK (12f9ad8) works. Not itemised: 60 fps on a mid-range phone, tilt, haptics, first-launch tutorial, offline queue.
 - Google sign-in started 2026-11-26: web client ID in `Auth.cs`; `android-check` will sign with the upload key once it exists. Open: enable the Google provider in Supabase, signing key, Android OAuth client (package + SHA-1), test user if the consent screen is in Testing.
+- First sign-in attempt on the phone (2026-11-27): no `/auth/v1/token` call reached Supabase. Fixed a likely cause (the Java plugin passed null through the Unity proxy, losing the answer); not yet confirmed on a phone.
 - Next: all F1–F14 code is written; what remains is the detailed phone checks, setup, merging to `main` and the signed release build.
 
 ## Decisions so far
