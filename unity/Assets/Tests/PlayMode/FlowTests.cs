@@ -128,6 +128,17 @@ public class FlowTests
         finally { game.Ads = real; }
     }
 
+    // The phone build drew everything with the error shader; every shape must use the shader we ship.
+    [UnityTest]
+    public IEnumerator ShapesUseTheShippedShader()
+    {
+        yield return null;
+        var renderers = GameManager.Instance.GetComponentsInChildren<Renderer>();
+        Assert.IsNotEmpty(renderers);
+        foreach (var r in renderers)
+            Assert.AreEqual("PolicePursuit/Flat", r.sharedMaterial.shader.name, r.name);
+    }
+
     [UnityTest]
     public IEnumerator TutorialCanBeStartedAndSkipped()
     {

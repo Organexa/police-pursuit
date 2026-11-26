@@ -614,6 +614,10 @@ namespace PolicePursuit.UI
             var image = Box(parent, "Button " + label, anchor, pos, size, Gameplay.Shapes.Navy);
             var button = image.gameObject.AddComponent<UnityEngine.UI.Button>();
             button.targetGraphic = image;
+            // Navy buttons vanish into the navy road without an edge.
+            var edge = image.gameObject.AddComponent<Outline>();
+            edge.effectColor = Gameplay.Shapes.Cyan;
+            edge.effectDistance = new Vector2(2, 2);
             if (onClick != null) button.onClick.AddListener(onClick);
             var text = Label(image.transform, Middle, Vector2.zero, size, 20, TextAnchor.MiddleCenter);
             text.text = label;

@@ -14,6 +14,8 @@ namespace PolicePursuit.Gameplay
         public static Color Hex(int rgb) =>
             new Color32((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb, 255);
 
+        static Material flat;
+
         public static GameObject Box(Transform parent, Vector3 pos, Vector3 size, Color color,
             PrimitiveType type = PrimitiveType.Cube)
         {
@@ -22,6 +24,8 @@ namespace PolicePursuit.Gameplay
             go.transform.SetParent(parent, false);
             go.transform.localPosition = pos;
             go.transform.localScale = size;
+            if (flat == null) flat = new Material(Resources.Load<Shader>("Flat"));
+            go.GetComponent<Renderer>().sharedMaterial = flat;
             Paint(go.GetComponent<Renderer>(), color);
             return go;
         }
@@ -29,8 +33,7 @@ namespace PolicePursuit.Gameplay
         public static void Paint(Renderer r, Color color)
         {
             var block = new MaterialPropertyBlock();
-            block.SetColor("_BaseColor", color); // URP
-            block.SetColor("_Color", color);     // built-in, until a URP asset is assigned
+            block.SetColor("_Color", color);
             r.SetPropertyBlock(block);
         }
 
