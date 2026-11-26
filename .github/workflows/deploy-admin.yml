@@ -27,5 +27,8 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: admin
+      # GitHub can take a while to list a fresh artifact (actions/deploy-pages issue 451). If it still
+      # fails, start a new run: re-running the job uploads a second artifact and fails for good.
+      - run: sleep 60
       - id: deployment
         uses: actions/deploy-pages@v4
