@@ -133,6 +133,7 @@ public class FlowTests
     public IEnumerator ShapesUseTheShippedShader()
     {
         yield return null;
+        Assume.That(!PolicePursuit.Gameplay.Models.Available, "the models bring their own shaders");
         var renderers = GameManager.Instance.GetComponentsInChildren<Renderer>();
         Assert.IsNotEmpty(renderers);
         foreach (var r in renderers)

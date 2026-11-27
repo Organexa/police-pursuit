@@ -113,7 +113,8 @@ namespace PolicePursuit.Gameplay
         {
             var go = new GameObject("Civil");
             go.transform.SetParent(transform, false);
-            Shapes.Car(go.transform, "Body", Random.value < 0.5f ? Shapes.Magenta : Color.grey);
+            var paint = Random.value < 0.5f ? Shapes.Magenta : Color.grey;
+            Models.Dress(Shapes.Car(go.transform, "Body", paint).transform, paint * 0.7f, Models.TrafficLod);
             var civil = new Civil { T = go.transform };
             Place(civil);
             return civil;
@@ -132,8 +133,10 @@ namespace PolicePursuit.Gameplay
             var go = new GameObject("Cop");
             go.transform.SetParent(transform, false);
             var body = Shapes.Car(go.transform, "Body", Color.white).transform;
-            Shapes.Box(body, new Vector3(-0.4f, 1.45f, -0.3f), new Vector3(0.6f, 0.25f, 0.5f), Shapes.Red, glow: 1);
-            Shapes.Box(body, new Vector3(0.4f, 1.45f, -0.3f), new Vector3(0.6f, 0.25f, 0.5f), Color.blue, glow: 1.5f);
+            float roof = Models.Available ? 1.28f : 1.45f; // the model sits lower than the boxes
+            Shapes.Box(body, new Vector3(-0.4f, roof, -0.3f), new Vector3(0.6f, 0.2f, 0.4f), Shapes.Red, glow: 1);
+            Shapes.Box(body, new Vector3(0.4f, roof, -0.3f), new Vector3(0.6f, 0.2f, 0.4f), Color.blue, glow: 1.5f);
+            Models.Dress(body, new Color(0.75f, 0.77f, 0.8f), Models.TrafficLod);
             go.transform.position = new Vector3(Lanes[cops.Count % Lanes.Length], 0,
                 player.transform.position.z - 25 - 12 * cops.Count);
             return go.transform;

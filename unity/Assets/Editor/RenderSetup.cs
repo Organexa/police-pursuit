@@ -25,6 +25,15 @@ class RenderSetup : IPreprocessBuildWithReport
             throw new BuildFailedException("The URP pipeline could not be set up.");
     }
 
+    // Fog is switched on from code too, and the build would otherwise drop it from the model shaders.
+    static void KeepLinearFog()
+    {
+        var settings = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
+        settings.FindProperty("m_FogStripping").intValue = 1; // custom
+        settings.FindProperty("m_FogKeepLinear").boolValue = true;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     public static void Apply()
     {
         var asset = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(AssetPath);
@@ -41,6 +50,7 @@ class RenderSetup : IPreprocessBuildWithReport
             AssetDatabase.SaveAssets();
         }
         GraphicsSettings.defaultRenderPipeline = asset;
+        KeepLinearFog();
         // The effects are added from code, so the build cannot tell which variants are used: keep them all.
         var stripping = GraphicsSettings.GetRenderPipelineSettings<URPShaderStrippingSetting>();
         if (stripping != null) stripping.stripUnusedPostProcessingVariants = false;

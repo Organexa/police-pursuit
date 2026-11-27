@@ -32,6 +32,12 @@ namespace PolicePursuit.Gameplay
         {
             var tile = new GameObject("Tile" + index).transform;
             tile.SetParent(transform, false);
+            if (Models.Available)
+            {
+                tile.localPosition = new Vector3(0, 0, (index - 1) * Length);
+                CityTile.Build(tile, index, Length);
+                return tile;
+            }
             float width = PlayerCar.RoadHalfWidth * 2 + 2;
 
             Shapes.Box(tile, new Vector3(0, -0.1f, 0), new Vector3(width, 0.2f, Length), Shapes.Navy);
