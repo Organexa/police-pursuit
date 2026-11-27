@@ -393,4 +393,25 @@ public class CoreTests
         Assert.AreNotEqual(new Vector2Int(2, 3), FleeDriver.Choose(new Vector2Int(2, 4), new Vector2Int(2, 3), pursuer));
         Assert.AreNotEqual(new Vector2Int(2, 5), FleeDriver.Choose(new Vector2Int(2, 4), new Vector2Int(2, 3), pursuer), "stays on the grid");
     }
+
+    [Test]
+    public void CivilCarsKeepRightAndTurnOnTheGrid()
+    {
+        // Northbound from the centre: lane 3.5 m to the right (east), clear of both crossroads.
+        Assert.AreEqual(new Vector3(3.5f, 0, 8), CivilCar.LaneStart(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        Assert.AreEqual(new Vector3(3.5f, 0, 46), CivilCar.LaneEnd(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        // Southbound on the same road uses the other lane.
+        Assert.AreEqual(-3.5f, CivilCar.LaneStart(new Vector2Int(2, 3), new Vector2Int(2, 2)).x, 1e-4f);
+        var random = new System.Random(1);
+        for (int i = 0; i < 50; i++)
+        {
+            var at = new Vector2Int(random.Next(5), random.Next(5));
+            var came = at + Vector2Int.down;
+            var next = CivilCar.Next(at, came, random);
+            Assert.AreNotEqual(came, next, "never straight back");
+            Assert.AreEqual(1, Mathf.Abs(next.x - at.x) + Mathf.Abs(next.y - at.y), "one road at a time");
+            Assert.That(next.x, Is.InRange(0, 4));
+            Assert.That(next.y, Is.InRange(0, 4));
+        }
+    }
 }

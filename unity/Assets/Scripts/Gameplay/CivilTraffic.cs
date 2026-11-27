@@ -1,0 +1,174 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace PolicePursuit.Gameplay
+{
+    // Civilian cars for the open world: they keep to the right-hand lane, turn at random at each crossroads
+    // (never straight back), stop for anything in front of them, and are knocked loose when hit hard.
+    // shortcut: no traffic lights or give-way rules at crossroads yet.
+    public class CivilCar : MonoBehaviour
+    {
+        public const float Lane = 3.5f, NodeClear = 8, Cruise = 9, Brake = 15, Accel = 4, LookAhead = 10, CrashSpeed = 5;
+
+        public Rigidbody Body { get; private set; }
+        public float Speed { get; private set; }
+        public bool Crashed { get; private set; }
+        public float CrashedAt { get; private set; }
+        Vector2Int from, to;
+        bool toEnd; // false: heading for the segment's start point, true: for its end
+        float blockedFor; // two cars nose to nose would wait for ever: after a while, creep on
+        System.Random random;
+
+        // Lane points of the road from crossroads a to b: start just past a, end just before b, on the right.
+        public static Vector3 LaneStart(Vector2Int a, Vector2Int b) => Lane3(a, b, PoliceChase.Centre(a), NodeClear);
+        public static Vector3 LaneEnd(Vector2Int a, Vector2Int b) => Lane3(a, b, PoliceChase.Centre(b), -NodeClear);
+
+        static Vector3 Lane3(Vector2Int a, Vector2Int b, Vector3 at, float along)
+        {
+            var dir = (PoliceChase.Centre(b) - PoliceChase.Centre(a)).normalized;
+            return at + dir * along + Vector3.Cross(Vector3.up, dir) * Lane;
+        }
+
+        public static Vector2Int Next(Vector2Int at, Vector2Int came, System.Random random)
+        {
+            var options = new List<Vector2Int>(3);
+            foreach (var d in new[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right })
+            {
+                var n = at + d;
+                if (n != came && n.x >= 0 && n.y >= 0 && n.x <= OpenWorld.Blocks && n.y <= OpenWorld.Blocks) options.Add(n);
+            }
+            return options[random.Next(options.Count)];
+        }
+
+        public static CivilCar Create(Transform parent, int seed)
+        {
+            var go = new GameObject("Civil");
+            go.transform.SetParent(parent, false);
+            var paint = seed % 3 == 0 ? Shapes.Magenta : seed % 3 == 1 ? Color.grey : Shapes.Hex(0x3A7D44);
+            Models.Dress(Shapes.Car(go.transform, "Body", paint).transform, paint * 0.7f, Models.TrafficLod);
+            var hull = go.AddComponent<BoxCollider>();
+            hull.center = new Vector3(0, 0.75f, 0);
+            hull.size = new Vector3(1.8f, 0.9f, 4f);
+            var c = go.AddComponent<CivilCar>();
+            c.Body = go.AddComponent<Rigidbody>();
+            c.Body.mass = 1200;
+            c.Body.interpolation = RigidbodyInterpolation.Interpolate;
+            c.random = new System.Random(seed);
+            return c;
+        }
+
+        // Puts the car at the start of the road a -> b, driving normally again.
+        public void Place(Vector2Int a, Vector2Int b)
+        {
+            from = a;
+            to = b;
+            toEnd = true;
+            Crashed = false;
+            blockedFor = 0;
+            gameObject.SetActive(true);
+            Speed = Cruise * 0.5f;
+            Body.isKinematic = true; // driven by script; the player and police still bump into it
+            var start = LaneStart(a, b);
+            transform.SetPositionAndRotation(start, Quaternion.LookRotation(LaneEnd(a, b) - start));
+            Body.position = transform.position;
+            Body.rotation = transform.rotation;
+        }
+
+        public Vector2Int Heading => to;
+
+        void FixedUpdate()
+        {
+            if (Crashed) return;
+            float dt = Time.fixedDeltaTime;
+            var goal = toEnd ? LaneEnd(from, to) : LaneStart(from, to);
+            var pos = Body.position;
+            var flat = goal - pos;
+            flat.y = 0;
+            if (flat.magnitude < 1)
+            {
+                if (toEnd)
+                {
+                    var next = Next(to, from, random);
+                    from = to;
+                    to = next;
+                    toEnd = false; // cut across the crossroads to the next road's start
+                }
+                else toEnd = true;
+                return;
+            }
+
+            // Stop for whatever is in front: other cars, the player on foot, police. Buildings never sit in a lane.
+            var eye = pos + Vector3.up * 0.7f + transform.forward * 2.1f;
+            bool blocked = Physics.Raycast(eye, transform.forward, LookAhead);
+            blockedFor = blocked ? blockedFor + dt : 0;
+            if (blockedFor > 4) blocked = blockedFor < 4.5f; // re-checks every 4.5 s, creeping at walking pace in between
+            float cap = blockedFor > 4 ? 1.5f : Cruise;
+            Speed = blocked ? Mathf.Max(0, Speed - Brake * dt) : Mathf.Min(cap, Speed + Accel * dt);
+            if (blockedFor > 4.5f + 1.5f) blockedFor = 0;
+
+            var dir = flat.normalized;
+            Body.MoveRotation(Quaternion.RotateTowards(Body.rotation, Quaternion.LookRotation(dir), 120 * dt));
+            Body.MovePosition(pos + transform.forward * Speed * dt);
+        }
+
+        // A hard hit knocks the car loose: physics takes over and it stops driving until respawned.
+        void OnCollisionEnter(Collision hit)
+        {
+            if (Crashed || hit.relativeVelocity.magnitude < CrashSpeed) return;
+            Crashed = true;
+            CrashedAt = Time.time;
+            Body.isKinematic = false;
+            Body.linearVelocity = transform.forward * Speed;
+            Speed = 0;
+        }
+    }
+
+    public class CivilTraffic : MonoBehaviour
+    {
+        public const float RespawnAfter = 8, RespawnAway = 40;
+        public readonly List<CivilCar> Cars = new List<CivilCar>();
+        public Transform Player { get; set; }
+        System.Random random = new System.Random(11);
+
+        public void Init(int count)
+        {
+            for (int i = 0; i < count; i++) Cars.Add(CivilCar.Create(transform, i));
+            ResetTraffic();
+        }
+
+        // Spreads the cars over different roads, each on its own segment, so none start on top of another.
+        public void ResetTraffic()
+        {
+            random = new System.Random(11);
+            var used = new HashSet<(Vector2Int, Vector2Int)>();
+            foreach (var car in Cars) Spawn(car, used);
+        }
+
+        void Spawn(CivilCar car, HashSet<(Vector2Int, Vector2Int)> used)
+        {
+            for (int tries = 0; tries < 50; tries++)
+            {
+                var a = new Vector2Int(random.Next(OpenWorld.Blocks + 1), random.Next(OpenWorld.Blocks + 1));
+                var b = CivilCar.Next(a, new Vector2Int(-1, -1), random);
+                var start = CivilCar.LaneStart(a, b) + transform.position;
+                if (used.Contains((a, b))) continue;
+                if (Player != null && Vector3.Distance(start, Player.position) < RespawnAway) continue;
+                if (Physics.CheckBox(start + Vector3.up * 0.8f, new Vector3(1.2f, 0.6f, 2.5f))) continue;
+                used.Add((a, b));
+                car.Place(a, b);
+                return;
+            }
+            car.gameObject.SetActive(false); // nowhere free: sit this one out
+        }
+
+        void Update()
+        {
+            foreach (var car in Cars)
+            {
+                if (!car.gameObject.activeSelf || !car.Crashed || Time.time - car.CrashedAt < RespawnAfter) continue;
+                if (Player != null && Vector3.Distance(car.transform.position, Player.position) < RespawnAway) continue;
+                Spawn(car, new HashSet<(Vector2Int, Vector2Int)>());
+            }
+        }
+    }
+}

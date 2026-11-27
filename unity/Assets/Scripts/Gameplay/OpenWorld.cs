@@ -38,6 +38,7 @@ namespace PolicePursuit.Gameplay
         public Mission Mission { get; private set; }
         public event System.Action<Mission> MissionEnded;
         public FleeDriver Fleer { get; private set; }
+        public CivilTraffic Traffic { get; private set; }
         public bool CarLocked { get; private set; } // broken down: cannot be driven again this attempt
         GameObject garagePad, safehousePad;
         bool reported;
@@ -111,6 +112,11 @@ namespace PolicePursuit.Gameplay
             pad.name = "Station";
             garagePad = Shapes.Box(transform, Mission.Garage + Vector3.up * 0.03f, new Vector3(12, 0.04f, 12), Color.green, glow: 1.5f);
             safehousePad = Shapes.Box(transform, Mission.Safehouse + Vector3.up * 0.03f, new Vector3(10, 0.04f, 10), Color.green, glow: 1.5f);
+            Traffic = new GameObject("Traffic").AddComponent<CivilTraffic>();
+            Traffic.transform.SetParent(transform, false);
+            Traffic.Player = Car.transform;
+            // Half the endless run's density: the district is small.
+            Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
             Fleer = VehicleController.Create(transform, Mission.FleeSpawn, Shapes.Hex(0xFF8A00)).gameObject.AddComponent<FleeDriver>();
             Begin(null);
         }
@@ -214,6 +220,7 @@ namespace PolicePursuit.Gameplay
             Car.Place(transform.TransformPoint(Spawn), 0);
             Police.GetComponent<VehicleController>().Place(transform.TransformPoint(PoliceSpawn), 0);
             Police.ResetChase();
+            Traffic.ResetTraffic();
             bustTime = cuffTime = 0;
         }
 
@@ -241,6 +248,7 @@ namespace PolicePursuit.Gameplay
         {
             Suspect.Target = OnFoot ? Walker.transform : null;
             Fleer.From = Player;
+            Traffic.Player = Player;
             if (Mission != null && Mission.Result != Mission.Outcome.None) return;
             bool held = Police.gameObject.activeSelf && PoliceDistance < BustRange && PlayerSpeed < BustSpeed;
             bustTime = held ? bustTime + Time.deltaTime : 0;

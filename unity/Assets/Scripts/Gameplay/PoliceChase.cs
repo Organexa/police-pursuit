@@ -93,12 +93,25 @@ namespace PolicePursuit.Gameplay
                 return;
             }
 
-            car.Steer = Mathf.Clamp(angle / 25f, -1, 1);
+            float steer = Mathf.Clamp(angle / 25f, -1, 1);
             bool sharpTurn = Mathf.Abs(angle) > 50;
             float distance = Flat(goal - transform.position);
-            car.Pedal = sharpTurn && speed > 10 ? -0.6f // brake into a corner
+            float pedal = sharpTurn && speed > 10 ? -0.6f // brake into a corner
                 : gentle && distance < 8 ? 0.2f         // close in gently, no ramming at speed
                 : 1;
+
+            // Traffic in the way: swerve to whichever side of it is nearer, and ease off when it is close.
+            // The cast starts outside the car's own hull, which it would otherwise hit.
+            float look = Mathf.Clamp(Mathf.Abs(speed) * 1.2f, 8, 25);
+            var eye = transform.position + Vector3.up * 0.8f + transform.forward * 2.3f;
+            if (Physics.SphereCast(eye, 1f, transform.forward, out var hit, look) && hit.collider.GetComponentInParent<CivilCar>() != null)
+            {
+                float side = transform.InverseTransformPoint(hit.collider.bounds.center).x;
+                steer = Mathf.Clamp(steer - Mathf.Sign(side) * 0.8f, -1, 1);
+                if (hit.distance < 6 && speed > 6) pedal = -0.5f;
+            }
+            car.Steer = steer;
+            car.Pedal = pedal;
 
             stuckTime = car.Pedal > 0 && Mathf.Abs(speed) < 1 ? stuckTime + dt : 0;
             if (stuckTime > StuckAfter) { stuckTime = 0; reverseLeft = ReverseFor; }

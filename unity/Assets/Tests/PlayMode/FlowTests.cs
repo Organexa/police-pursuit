@@ -553,4 +553,45 @@ public class FlowTests
         Assert.AreEqual(PolicePursuit.Gameplay.Mission.Outcome.Incapacitated, world.Mission.Result);
         Assert.AreEqual(coins, GameManager.TotalCoins, "no reward for a failed attempt");
     }
+
+    [UnityTest]
+    public IEnumerator OpenWorldTrafficDrivesStopsAndCrashes()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var cars = world.Traffic.Cars;
+        int active = cars.FindAll(c => c.gameObject.activeSelf).Count;
+        Assert.AreEqual(GraphicsPresets.MaxCars(GraphicsPresets.Load()) / 2, active, "every car found a free road");
+
+        var starts = cars.ConvertAll(c => c.transform.position);
+        yield return new WaitForSeconds(3);
+        float most = 0;
+        for (int i = 0; i < cars.Count; i++)
+        {
+            var p = cars[i].transform.position;
+            most = Mathf.Max(most, Vector3.Distance(p, starts[i]));
+            // On a road: near a north-south or an east-west road centre line.
+            float pitch = PolicePursuit.Gameplay.OpenWorld.Pitch;
+            float offX = Mathf.Abs(p.x - Mathf.Round(p.x / pitch) * pitch), offZ = Mathf.Abs(p.z - Mathf.Round(p.z / pitch) * pitch);
+            Assert.Less(Mathf.Min(offX, offZ), PolicePursuit.Gameplay.OpenWorld.Road / 2, cars[i].name + " left the road");
+        }
+        Assert.Greater(most, 10, "traffic moves");
+
+        var civ = cars[0];
+        world.Car.Place(civ.transform.position + civ.transform.forward * 7 + Vector3.up * 0.3f, civ.transform.eulerAngles.y);
+        yield return new WaitForSeconds(1.5f);
+        Assert.Less(civ.Speed, 1, "stops for a car in front");
+        Assert.IsFalse(civ.Crashed);
+
+        world.Car.Place(civ.transform.position + civ.transform.forward * 9 + Vector3.up * 0.3f, civ.transform.eulerAngles.y + 180);
+        yield return new WaitForFixedUpdate();
+        world.Car.Body.linearVelocity = -civ.transform.forward * 15;
+        for (float t = 0; t < 2 && !civ.Crashed; t += Time.deltaTime) yield return null;
+        Assert.IsTrue(civ.Crashed, "a hard hit knocks it loose");
+        Assert.IsFalse(civ.Body.isKinematic);
+    }
 }
