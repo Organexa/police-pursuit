@@ -482,4 +482,21 @@ public class CoreTests
         }
         finally { UnityEngine.Object.DestroyImmediate(car.gameObject); }
     }
+
+    [Test]
+    public void RoadblockGoesBeyondTheNextCrossroads()
+    {
+        var north = new Vector3(0, 0, 10);
+        Assert.IsTrue(RoadBlock.Plan(new Vector3(0, 0, -5), north, out var a, out var b), "crossroads ahead at the centre");
+        Assert.AreEqual(new Vector2Int(2, 2), a);
+        Assert.AreEqual(new Vector2Int(2, 3), b);
+        Assert.IsTrue(RoadBlock.Plan(new Vector3(0, 0, 5), north, out a, out b), "centre already behind: the next one");
+        Assert.AreEqual(new Vector2Int(2, 3), a);
+        Assert.AreEqual(new Vector2Int(2, 4), b);
+        Assert.IsFalse(RoadBlock.Plan(new Vector3(0, 0, 100), north, out _, out _), "no road beyond the edge");
+        Assert.IsFalse(RoadBlock.Plan(Vector3.zero, new Vector3(0.2f, 0, 0.2f), out _, out _), "barely moving");
+        Assert.IsTrue(RoadBlock.Plan(new Vector3(-30, 0, 0), new Vector3(10, 0, 1), out a, out b), "east-west too");
+        Assert.AreEqual(new Vector2Int(2, 2), a);
+        Assert.AreEqual(new Vector2Int(3, 2), b);
+    }
 }

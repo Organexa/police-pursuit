@@ -41,6 +41,7 @@ namespace PolicePursuit.Gameplay
         public CivilTraffic Traffic { get; private set; }
         public Pedestrians People { get; private set; }
         public TrafficLights Lights { get; private set; }
+        public RoadBlock Block { get; private set; }
         public bool CarLocked { get; private set; } // broken down: cannot be driven again this attempt
         GameObject garagePad, safehousePad;
         bool reported;
@@ -122,6 +123,9 @@ namespace PolicePursuit.Gameplay
             Traffic.PoliceCar = Police.GetComponent<VehicleController>();
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
+            Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
+            Block.transform.SetParent(transform, false);
+            Block.Init();
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
             Lights.transform.SetParent(transform, false);
             Lights.Build();
@@ -259,6 +263,7 @@ namespace PolicePursuit.Gameplay
             Car.Place(transform.TransformPoint(Spawn), 0);
             Police.GetComponent<VehicleController>().Place(transform.TransformPoint(PoliceSpawn), 0);
             Police.ResetChase();
+            Block.ResetBlock();
             Traffic.ResetTraffic();
             bustTime = cuffTime = 0;
         }
@@ -286,6 +291,8 @@ namespace PolicePursuit.Gameplay
         void Update()
         {
             Suspect.Target = OnFoot ? Walker.transform : null;
+            // Roadblocks only while the police are actually after you in your car.
+            Block.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             Fleer.From = Player;
             Traffic.Player = Player;
             Car.Flash(SirenOn);

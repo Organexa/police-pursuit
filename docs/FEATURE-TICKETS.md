@@ -220,4 +220,5 @@ _Added 2026-11-27 at your request: a second mode next to the endless run, which 
 - OW16 ◐ Escapee under your siren (within 40 m): speed cap 80% → 90% of top speed, still below yours.
 - OW17 ◐ AI cars (police chaser, escapee) swerve harder and brake fully for people on a crossing.
 - OW18 ◐ Civilian cars stop for people on a crossing and never creep into them (test added; creep fix).
+- OW19 ◐ Roadblock (while the police chase you in your car at over 8 m/s; first after 20 s, then every 45 s): two flashing police cars angled across the road beyond the next crossroads ahead, leaving a 3 m gap on the right; packs up after 25 s, once you are 60 m past, or when the chase is off. **Tests:** EditMode where it goes, PlayMode lanes blocked, gap clear, timed spawn, clearing.
 - **Open questions:** character art and animations (you choose and buy a pack; placeholders until then); open-world scores do not go to the leaderboard until the server has a rule for them.

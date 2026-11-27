@@ -948,4 +948,48 @@ public class FlowTests
         for (float t = 0; t < 2; t += Time.deltaTime) yield return null;
         Assert.Greater(civ.Speed, 1, "drives on once they have crossed");
     }
+
+    [UnityTest]
+    public IEnumerator RoadblockLeavesAGapAndClears()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var block = world.Block;
+        Assert.IsFalse(block.Active);
+
+        block.Tick(world.Car, false, PolicePursuit.Gameplay.RoadBlock.FirstAfter + 1);
+        Assert.IsFalse(block.Active, "not chased: none, however long you drive");
+
+        // The police chase the car from the far corner for the rest of this test, which keeps the roadblock up.
+        block.Spawn(new Vector2Int(2, 3), new Vector2Int(2, 4)); // north of the centre: x = 0, z 54..108
+        yield return new WaitForFixedUpdate();
+        yield return null;
+        Assert.IsTrue(block.Active);
+        Assert.IsTrue(block[0].LightsShowing, "lights flashing");
+        for (int i = 0; i < 2; i++)
+        {
+            var p = block[i].transform.position;
+            Assert.Less(Mathf.Abs(p.x), PolicePursuit.Gameplay.OpenWorld.Road / 2, "on the road");
+            Assert.That(p.z, Is.InRange(70f, 92f), "between the two crossroads");
+        }
+        Physics.SyncTransforms();
+        Assert.IsTrue(Physics.CheckBox(new Vector3(-4.5f, 0.8f, 81), new Vector3(0.85f, 0.4f, 1.5f)), "the left lane is blocked");
+        Assert.IsFalse(Physics.CheckBox(new Vector3(5.5f, 0.8f, 81), new Vector3(0.85f, 0.4f, 2f)), "a car-wide gap on the right");
+
+        block.Tick(world.Car, true, PolicePursuit.Gameplay.RoadBlock.Lasts + 1);
+        Assert.IsFalse(block.Active, "packs up after a while");
+
+        world.Restart();
+        world.Car.Place(new Vector3(0, 0.6f, -30), 0);
+        yield return new WaitForFixedUpdate();
+        world.Car.Body.linearVelocity = Vector3.forward * 12;
+        block.Tick(world.Car, true, PolicePursuit.Gameplay.RoadBlock.FirstAfter + 1);
+        Assert.IsTrue(block.Active, "set up ahead while you are chased at speed");
+        Assert.AreEqual(new Vector2Int(2, 2), block.From);
+        block.Tick(world.Car, false, 0.02f);
+        Assert.IsFalse(block.Active, "gone when the chase is off");
+    }
 }
