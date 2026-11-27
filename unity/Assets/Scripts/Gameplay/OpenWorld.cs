@@ -53,6 +53,7 @@ namespace PolicePursuit.Gameplay
         public PoliceDog Dog { get; private set; }
         public PrintTrail Footprints { get; private set; } // yours, for a few seconds after wading
         public Weather Sky { get; private set; }
+        public Puddles Puddles { get; private set; }
         bool walkerWasWet;
         public const float DogRest = 30; // after a dog loses your scent, none comes out again for this long
         float noDogUntil;
@@ -173,6 +174,9 @@ namespace PolicePursuit.Gameplay
             Sky = new GameObject("Weather").AddComponent<Weather>();
             Sky.transform.SetParent(transform, false);
             Sky.Init(Core.GraphicsPresets.Load() == Core.GfxPreset.Low ? 200 : 600);
+            Puddles = new GameObject("Puddles").AddComponent<Puddles>();
+            Puddles.transform.SetParent(transform, false);
+            Puddles.Build();
             Dog.Barked += () => Core.GameManager.Instance?.Sound?.Bark();
             var tunnelMid = (PoliceChase.Centre(TunnelFrom) + PoliceChase.Centre(TunnelTo)) / 2;
             Solid(tunnelMid + Vector3.up * TunnelRoof, new Vector3(Road + 1, 1, Pitch - Road), Shapes.Hex(0x2A2E38)).name = "Tunnel roof";
@@ -190,6 +194,10 @@ namespace PolicePursuit.Gameplay
             People.PoliceVehicle = Police.GetComponent<VehicleController>();
             People.PlayerCar = Car;
             Fleer = VehicleController.Create(transform, Mission.FleeSpawn, Shapes.Hex(0xFF8A00)).gameObject.AddComponent<FleeDriver>();
+            // Every light bar the puddles can pick up: the chaser, the roadblock cars, your own on the police side.
+            Puddles.Lights.Add(Police.GetComponent<VehicleController>());
+            Puddles.Lights.AddRange(Block.Cars);
+            Puddles.Lights.Add(Car);
             Begin(null);
         }
 
@@ -469,6 +477,7 @@ namespace PolicePursuit.Gameplay
             }
             if (cam == null) return;
             if (Sky.Raining) { Footprints.Clear(); Dog.WashPrints(); } // rain washes every wet print away at once
+            Puddles.Show(Sky.Raining);
             Footprints.Tick(Walker.transform, Time.deltaTime); // also in the car, so old prints still fade
             if (OnFoot)
             {

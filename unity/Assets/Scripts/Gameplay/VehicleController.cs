@@ -38,6 +38,8 @@ namespace PolicePursuit.Gameplay
 
         public bool HasLightBar => red != null;
         public bool LightsShowing => HasLightBar && (red.activeSelf || blue.activeSelf);
+        // The colour the light bar is showing right now (red, blue), or clear when dark.
+        public Color LightColour => !HasLightBar ? Color.clear : red.activeSelf ? Shapes.Red : blue.activeSelf ? Color.blue : Color.clear;
         GameObject red, blue;
 
         public void AddLightBar()

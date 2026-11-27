@@ -1576,4 +1576,39 @@ public class FlowTests
         Assert.AreEqual(dryFog, RenderSettings.fogEndDistance, 0.01f, "clear again");
     }
 
+    [UnityTest]
+    public IEnumerator PuddlesPickUpPoliceLightsInTheRain()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var puddles = world.Puddles;
+        world.Police.Target = null; // stays put: its lights still flash
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        yield return null;
+        Assert.AreEqual(0, puddles.Showing, "dry: no puddles");
+
+        world.Sky.Forced = true;
+        yield return null;
+        yield return null; // the weather turns in Update, the puddles follow in the open world's LateUpdate
+        Assert.AreEqual(PolicePursuit.Gameplay.Puddles.Count, puddles.Showing, "rain: puddles on the roads");
+
+        police.Place(puddles.Position(0) + new Vector3(2, 0.6f, 0), 0); // right beside puddle 0
+        int far = -1;
+        for (int i = 1; i < PolicePursuit.Gameplay.Puddles.Count && far < 0; i++)
+            if (Vector3.Distance(puddles.Position(i), puddles.Position(0)) > 40
+                && Vector3.Distance(puddles.Position(i), world.Car.transform.position) > 20) far = i;
+        Assert.GreaterOrEqual(far, 0);
+        yield return new WaitForSeconds(0.3f);
+        Assert.Greater(puddles.Reflecting(0), 0.5f, "a puddle next to flashing lights glows with them");
+        Assert.AreEqual(0, puddles.Reflecting(far), "one far away stays plain water");
+
+        world.Sky.Forced = false;
+        yield return null;
+        yield return null;
+        Assert.AreEqual(0, puddles.Showing, "they dry up with the rain");
+    }
+
 }
