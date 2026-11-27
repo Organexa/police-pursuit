@@ -500,4 +500,12 @@ public class CoreTests
         Assert.AreEqual(new Vector2Int(3, 2), b);
     }
 
+    [Test]
+    public void SearchlightAimsAtTheRoadAhead()
+    {
+        Assert.AreEqual(new Vector3(0, 0, 10), Helicopter.Aim(Vector3.zero, new Vector3(0, 0, 10)), "a second ahead");
+        Assert.AreEqual(Helicopter.MaxLead, Helicopter.Aim(Vector3.zero, new Vector3(0, 3, 40)).magnitude, 1e-4f, "never far ahead, and on the ground");
+        Assert.AreEqual(new Vector3(5, 0, 7), Helicopter.Aim(new Vector3(5, 1, 7), Vector3.zero), "standing still: straight down on you");
+    }
+
 }

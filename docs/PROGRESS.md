@@ -79,7 +79,8 @@ _Last updated: 2026-11-27_
 - OW19 roadblock built 2026-11-28 (`RoadBlock.cs`): EditMode 35/35, PlayMode 29/29 on the scratch copy.
 - OW20 roadblock cars chase you once passed: EditMode 35/35, PlayMode 30/30 on the scratch copy.
 - OW21 traffic pulls over for roadblock cars: EditMode 35/35, PlayMode 31/31 on the scratch copy.
-- OW22 wanted level and helicopter (`Helicopter.cs`): EditMode 35/35, PlayMode 33/33 on the scratch copy. No helicopter sound. None of OW2–OW5 checked by hand or on a phone; no sounds or animations for walking or fighting; placeholder capsules. sits in the repo root (`api/`, `src/`, `bin/`, `go.env`, `PATENTS`, …); not part of this project, do not commit it.
+- OW22 wanted level and helicopter (`Helicopter.cs`): EditMode 35/35, PlayMode 33/33 on the scratch copy. No helicopter sound.
+- OW23 searchlight aims ahead: EditMode 36/36, PlayMode 34/34 on the scratch copy. None of OW2–OW5 checked by hand or on a phone; no sounds or animations for walking or fighting; placeholder capsules. sits in the repo root (`api/`, `src/`, `bin/`, `go.env`, `PATENTS`, …); not part of this project, do not commit it.
 
 ## Decisions so far
 | Topic | Decision |

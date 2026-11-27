@@ -9,6 +9,7 @@ namespace PolicePursuit.Gameplay
     {
         public const int FromWanted = 4;
         public const float Height = 30, TrackSpeed = 18, FlyInSpeed = 25; // metres, m/s (player tops 50), m/s flying in
+        public const float Lead = 1, MaxLead = 15; // the beam aims where you will be in about a second, at most 15 m ahead
         public Vector3 Watching { get; private set; } // ground point under the beam
         public bool Overhead { get; private set; } // arrived above its spot, beam on
         public Light Beam { get; private set; }
@@ -54,9 +55,15 @@ namespace PolicePursuit.Gameplay
             Overhead = false;
         }
 
-        public void Tick(Vector3 player, float dt)
+        public static Vector3 Aim(Vector3 player, Vector3 velocity)
         {
-            var target = new Vector3(player.x, 0, player.z);
+            var ahead = Vector3.ClampMagnitude(new Vector3(velocity.x, 0, velocity.z) * Lead, MaxLead);
+            return new Vector3(player.x, 0, player.z) + ahead;
+        }
+
+        public void Tick(Vector3 player, Vector3 velocity, float dt)
+        {
+            var target = Aim(player, velocity);
             Watching = Vector3.MoveTowards(Watching, target, TrackSpeed * dt);
             var over = Watching + Vector3.up * Height;
             transform.position = Vector3.MoveTowards(transform.position, over, (Overhead ? TrackSpeed * 1.5f : FlyInSpeed) * dt);

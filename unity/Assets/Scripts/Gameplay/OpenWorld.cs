@@ -291,7 +291,8 @@ namespace PolicePursuit.Gameplay
             if (Wanted >= Helicopter.FromWanted)
             {
                 if (!Heli.gameObject.activeSelf) Heli.Arrive(Player.position);
-                Heli.Tick(Player.position, dt);
+                var velocity = OnFoot ? Walker.transform.forward * Walker.Speed : Car.Body.linearVelocity;
+                Heli.Tick(Player.position, velocity, dt);
             }
             else if (Heli.gameObject.activeSelf) Heli.Leave();
         }

@@ -1119,4 +1119,33 @@ public class FlowTests
         Assert.AreEqual(1, world.Wanted, "out of sight and far away long enough: lost them");
     }
 
+    [UnityTest]
+    public IEnumerator SearchlightLeadsAMovingCar()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var heli = world.Heli;
+        world.Police.Target = world.Car.transform; // still a chase...
+        world.Police.enabled = false; // ...but the police car stays parked in its corner, so no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        world.ChaseTime = 95;
+        world.Car.Place(new Vector3(0, 0.6f, -100), 0); // a long straight north ahead
+        Time.timeScale = 4;
+        for (float t = 0; t < 20 && !heli.Overhead; t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsTrue(heli.Overhead);
+        for (float t = 0; t < 3; t += Time.deltaTime)
+        {
+            world.Car.Body.linearVelocity = Vector3.forward * 10;
+            yield return null;
+        }
+        Assert.Greater(heli.Watching.z, world.Car.transform.position.z + 3, "the beam is on the road ahead of you");
+        Assert.Less(heli.Watching.z - world.Car.transform.position.z, PolicePursuit.Gameplay.Helicopter.MaxLead + 1, "close ahead, not far off");
+        world.Police.enabled = true;
+    }
+
 }
