@@ -38,6 +38,7 @@ namespace PolicePursuit.Core
             // shortcut: in the editor this edits the URP asset itself; copy the asset per preset if that gets annoying.
             if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
                 urp.renderScale = RenderScale(p);
+            Gameplay.NightLook.Apply(p);
         }
     }
 }

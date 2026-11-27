@@ -17,7 +17,7 @@ namespace PolicePursuit.Gameplay
         static Material flat;
 
         public static GameObject Box(Transform parent, Vector3 pos, Vector3 size, Color color,
-            PrimitiveType type = PrimitiveType.Cube)
+            PrimitiveType type = PrimitiveType.Cube, float glow = 0)
         {
             var go = GameObject.CreatePrimitive(type);
             Object.Destroy(go.GetComponent<Collider>()); // hits are distance checks, not physics
@@ -26,14 +26,22 @@ namespace PolicePursuit.Gameplay
             go.transform.localScale = size;
             if (flat == null) flat = new Material(Resources.Load<Shader>("Flat"));
             go.GetComponent<Renderer>().sharedMaterial = flat;
-            Paint(go.GetComponent<Renderer>(), color);
+            Paint(go.GetComponent<Renderer>(), color, glow);
             return go;
         }
 
-        public static void Paint(Renderer r, Color color)
+        public static void Paint(Renderer r, Color color, float glow = 0)
         {
             var block = new MaterialPropertyBlock();
-            block.SetColor("_Color", color);
+            block.SetColor("_Color", color * (1 + glow));
+            r.SetPropertyBlock(block);
+        }
+
+        public static void LightWindows(Renderer r)
+        {
+            var block = new MaterialPropertyBlock();
+            r.GetPropertyBlock(block); // keep the colour
+            block.SetFloat("_Windows", 1);
             r.SetPropertyBlock(block);
         }
 

@@ -24,3 +24,11 @@ google-services.json
 firebase.xml
 *service-account*.json
 *-sa.json
+
+# Created by Assets/Editor/RenderSetup.cs
+unity/Assets/Settings/
+unity/Assets/Settings.meta
+
+# Third-party models from the private assets repository: never commit here
+unity/Assets/ThirdParty/
+unity/Assets/ThirdParty.meta

@@ -133,10 +133,20 @@ public class FlowTests
     public IEnumerator ShapesUseTheShippedShader()
     {
         yield return null;
+        Assume.That(!PolicePursuit.Gameplay.Models.Available, "the models bring their own shaders");
         var renderers = GameManager.Instance.GetComponentsInChildren<Renderer>();
         Assert.IsNotEmpty(renderers);
         foreach (var r in renderers)
             Assert.AreEqual("PolicePursuit/Flat", r.sharedMaterial.shader.name, r.name);
+    }
+
+    [UnityTest]
+    public IEnumerator UsesTheUniversalPipeline()
+    {
+        yield return null;
+        var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+        Assert.IsNotNull(pipeline, "no render pipeline assigned");
+        StringAssert.Contains("UniversalRenderPipelineAsset", pipeline.GetType().Name);
     }
 
     // Wide phones used to cut the Back buttons off.

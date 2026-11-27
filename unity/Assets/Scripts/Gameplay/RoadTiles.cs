@@ -32,6 +32,12 @@ namespace PolicePursuit.Gameplay
         {
             var tile = new GameObject("Tile" + index).transform;
             tile.SetParent(transform, false);
+            if (Models.Available)
+            {
+                tile.localPosition = new Vector3(0, 0, (index - 1) * Length);
+                CityTile.Build(tile, index, Length);
+                return tile;
+            }
             float width = PlayerCar.RoadHalfWidth * 2 + 2;
 
             Shapes.Box(tile, new Vector3(0, -0.1f, 0), new Vector3(width, 0.2f, Length), Shapes.Navy);
@@ -43,10 +49,13 @@ namespace PolicePursuit.Gameplay
             foreach (int side in new[] { -1, 1 })
             {
                 var neon = side < 0 ? Shapes.Cyan : Shapes.Magenta;
-                Shapes.Box(tile, new Vector3(side * width / 2, 0.2f, 0), new Vector3(0.3f, 0.4f, Length), neon);
+                Shapes.Box(tile, new Vector3(side * width / 2, 0.2f, 0), new Vector3(0.3f, 0.4f, Length), neon,
+                    glow: 1.2f);
                 float height = 6 + (index * 5 + side + 1) % 11;
-                Shapes.Box(tile, new Vector3(side * 12, height / 2, 0), new Vector3(8, height, 20), Shapes.Dark);
-                Shapes.Box(tile, new Vector3(side * 12, height, 0), new Vector3(8.2f, 0.4f, 20.2f), neon);
+                var tower = Shapes.Box(tile, new Vector3(side * 12, height / 2, 0), new Vector3(8, height, 20),
+                    Shapes.Hex(0x1E2A55));
+                Shapes.LightWindows(tower.GetComponent<Renderer>());
+                Shapes.Box(tile, new Vector3(side * 12, height, 0), new Vector3(8.2f, 0.4f, 20.2f), neon, glow: 1.2f);
             }
             return tile;
         }

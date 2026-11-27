@@ -22,7 +22,9 @@ namespace PolicePursuit.Gameplay
                 go.AddComponent<AudioListener>();
             }
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = Shapes.Dark;
+            cam.backgroundColor = NightLook.Sky;
+            UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(cam)
+                .renderPostProcessing = true;
             cam.farClipPlane = 350;
 
             var rig = cam.gameObject.AddComponent<CarCamera>();

@@ -41,6 +41,12 @@ public class CoreTests
     public void WantedRisesEvery30Seconds(double seconds, int expected) =>
         Assert.AreEqual(expected, WantedLevel.ForDuration(seconds));
 
+    [TestCase(GfxPreset.Low, false, false)]
+    [TestCase(GfxPreset.Medium, true, false)]
+    [TestCase(GfxPreset.High, true, true)]
+    public void EffectsFollowThePreset(GfxPreset preset, bool bloom, bool blur) =>
+        Assert.AreEqual((bloom, blur), PolicePursuit.Gameplay.NightLook.Effects(preset));
+
     [TestCase(2048, 2048, GfxPreset.Low)]
     [TestCase(8192, 512, GfxPreset.Low)]
     [TestCase(4096, 2048, GfxPreset.Medium)]

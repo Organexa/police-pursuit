@@ -20,7 +20,7 @@ namespace PolicePursuit.Gameplay
             player = target;
             for (int i = 0; i < Count; i++)
                 coins[i] = Shapes.Box(transform, Vector3.zero, new Vector3(1, 0.1f, 1),
-                    Shapes.Hex(0xFFD23F), PrimitiveType.Cylinder).transform;
+                    Shapes.Hex(0xFFD23F), PrimitiveType.Cylinder, 0.6f).transform;
             ResetCoins();
         }
 

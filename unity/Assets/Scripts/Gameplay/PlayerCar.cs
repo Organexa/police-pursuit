@@ -33,6 +33,7 @@ namespace PolicePursuit.Gameplay
         void Awake()
         {
             body = Shapes.Car(transform, "Body", Shapes.Cyan).transform;
+            Models.Dress(body, Shapes.Cyan, Models.PlayerLod);
             ResetCar();
         }
 
@@ -40,6 +41,8 @@ namespace PolicePursuit.Gameplay
         {
             Spec = car;
             Shapes.Paint(body.GetChild(0).GetComponent<Renderer>(), Shapes.Hex(car.Color));
+            var model = body.Find("Model");
+            if (model != null) Models.Paint(model.GetComponent<Renderer>(), Models.PlayerLod, Shapes.Hex(car.Color));
             ResetCar();
         }
 
