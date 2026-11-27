@@ -139,6 +139,15 @@ public class FlowTests
             Assert.AreEqual("PolicePursuit/Flat", r.sharedMaterial.shader.name, r.name);
     }
 
+    [UnityTest]
+    public IEnumerator UsesTheUniversalPipeline()
+    {
+        yield return null;
+        var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+        Assert.IsNotNull(pipeline, "no render pipeline assigned");
+        StringAssert.Contains("UniversalRenderPipelineAsset", pipeline.GetType().Name);
+    }
+
     // Wide phones used to cut the Back buttons off.
     [UnityTest]
     public IEnumerator CanvasNeverShrinksBelowTheLayout()

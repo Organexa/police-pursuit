@@ -132,8 +132,8 @@ namespace PolicePursuit.Gameplay
             var go = new GameObject("Cop");
             go.transform.SetParent(transform, false);
             var body = Shapes.Car(go.transform, "Body", Color.white).transform;
-            Shapes.Box(body, new Vector3(-0.4f, 1.45f, -0.3f), new Vector3(0.6f, 0.25f, 0.5f), Shapes.Red);
-            Shapes.Box(body, new Vector3(0.4f, 1.45f, -0.3f), new Vector3(0.6f, 0.25f, 0.5f), Color.blue);
+            Shapes.Box(body, new Vector3(-0.4f, 1.45f, -0.3f), new Vector3(0.6f, 0.25f, 0.5f), Shapes.Red, glow: 1);
+            Shapes.Box(body, new Vector3(0.4f, 1.45f, -0.3f), new Vector3(0.6f, 0.25f, 0.5f), Color.blue, glow: 1.5f);
             go.transform.position = new Vector3(Lanes[cops.Count % Lanes.Length], 0,
                 player.transform.position.z - 25 - 12 * cops.Count);
             return go.transform;

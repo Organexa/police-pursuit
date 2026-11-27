@@ -24,3 +24,7 @@ google-services.json
 firebase.xml
 *service-account*.json
 *-sa.json
+
+# Created by Assets/Editor/RenderSetup.cs
+unity/Assets/Settings/
+unity/Assets/Settings.meta
