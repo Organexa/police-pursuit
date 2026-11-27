@@ -1247,15 +1247,17 @@ public class FlowTests
         Assert.IsTrue(dog.gameObject.activeSelf);
         int busts = world.Busts;
 
-        world.Walker.Place(PolicePursuit.Gameplay.OpenWorld.ParkCentre, 0); // into the pond
+        // Into the pond, with the park's north fence between you and the dog: in the water and out of its sight.
+        var pond = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        dog.Release(pond + new Vector3(0, 0.1f, PolicePursuit.Gameplay.OpenWorld.FenceHalf + 3), world.Walker.transform, world.Melee);
+        world.Walker.Place(pond, 0);
         yield return null;
         yield return null;
-        Assert.IsTrue(dog.LostScent, "water breaks the trail");
+        Assert.IsTrue(dog.LostScent, "in the water and out of sight: the trail is broken");
         Assert.AreEqual(0.5f, world.Walker.SpeedScale, "wading is slow");
-        Assert.AreEqual(shore.x, dog.LastScent.x, 0.5f, "it goes to where it last had the scent");
 
         Time.timeScale = 4;
-        for (float t = 0; t < 20 && dog.gameObject.activeSelf; t += Time.deltaTime) yield return null;
+        for (float t = 0; t < 40 && dog.gameObject.activeSelf; t += Time.deltaTime) yield return null;
         Assert.IsFalse(dog.gameObject.activeSelf, "gives up after a sniff around");
         Assert.AreEqual(busts, world.Busts, "and never held you");
 
@@ -1291,10 +1293,11 @@ public class FlowTests
         Assert.IsTrue(dog.Barking, "barks at you in plain sight");
         Assert.GreaterOrEqual(barks, 1);
 
-        world.Walker.Place(PolicePursuit.Gameplay.OpenWorld.ParkCentre, 0); // into the pond
+        world.Walker.Place(PolicePursuit.Gameplay.OpenWorld.ParkCentre, 0); // into the pond, in plain view
         yield return null;
         yield return null;
-        Assert.IsFalse(dog.Barking, "scent lost: it goes quiet");
+        Assert.IsFalse(dog.LostScent, "it can see you: no losing it in the water");
+        Assert.IsTrue(dog.Barking, "and it keeps barking");
         dog.Barked -= count;
         world.Police.enabled = true;
     }
@@ -1369,6 +1372,40 @@ public class FlowTests
             yield return null;
         }
         Assert.Less(closest, PolicePursuit.Gameplay.PoliceDog.HoldRange, "it ran round the open end of the fence to you");
+        world.Police.enabled = true;
+    }
+
+    [UnityTest]
+    public IEnumerator PoliceDogSwimsAfterYouInSight()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var pond = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        float half = PolicePursuit.Gameplay.OpenWorld.PondHalf;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        police.Place(pond + new Vector3(half + 3, 0.6f, -25), 0); // by the park's open east side
+        world.Walker.Place(pond + new Vector3(-half + 2, 0, 0), 0); // in the water, near the west bank
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.gameObject.activeSelf);
+        dog.Release(pond + new Vector3(half - 1, 0.1f, 0), world.Walker.transform, world.Melee); // in the water, east side
+        yield return null;
+        Assert.IsTrue(dog.Swimming);
+        Assert.AreEqual(PolicePursuit.Gameplay.PoliceDog.Speed * PolicePursuit.Gameplay.PoliceDog.SwimScale, dog.CurrentSpeed, 1e-4f);
+
+        var start = dog.transform.position;
+        yield return new WaitForSeconds(1);
+        float swum = Vector3.Distance(dog.transform.position, start);
+        Assert.IsFalse(dog.LostScent, "it can see you across the water");
+        Assert.That(swum, Is.InRange(1.5f, PolicePursuit.Gameplay.PoliceDog.Speed * 0.75f), "swims after you, at half speed");
         world.Police.enabled = true;
     }
 

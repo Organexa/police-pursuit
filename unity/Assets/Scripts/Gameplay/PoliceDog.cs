@@ -5,7 +5,8 @@ namespace PolicePursuit.Gameplay
     // A police dog released from the chasing police car when the player is on foot nearby. It runs straight at the
     // player when in sight, otherwise crossroads to crossroads, and holds the player (a bust, no injury shown) if it
     // stays right beside them for a second. Sprinting outruns it slowly; a dodge breaks its hold.
-    // Water breaks the trail: once the player wades in, it goes to where it last had the scent, waits, and gives up.
+    // In water it swims after the player at half speed while it can see them; a player in the water and out of its
+    // sight has broken the trail, so it goes to where it last saw them, noses about, and gives up.
     // It cannot be hurt: no Health, so neither shots nor fists affect it.
     // shortcut: a box figure, no animation or barking.
     public class PoliceDog : MonoBehaviour
@@ -13,7 +14,9 @@ namespace PolicePursuit.Gameplay
         public const float Speed = 6.5f, ReleaseRange = 40, HoldRange = 1.2f, HoldFor = 1;
         public float HoldProgress => held / HoldFor;
         public bool Holding => held >= HoldFor;
-        public const float SniffFor = 6;
+        public const float SniffFor = 6, SwimScale = 0.5f;
+        public bool Swimming => OpenWorld.InWater(transform.position);
+        public float CurrentSpeed => Swimming ? Speed * SwimScale : Speed;
         // Barks while it can see the player close by: the police cannot be lost while it does.
         public const float BarkRange = 30, BarkEvery = 1.5f;
         public bool Barking { get; private set; }
@@ -73,12 +76,12 @@ namespace PolicePursuit.Gameplay
         {
             if (target == null) return;
             float dt = Time.deltaTime;
-            if (!LostScent && OpenWorld.InWater(target.position)) LostScent = true;
             if (LostScent) { Barking = false; Sniff(dt); return; }
-            LastScent = target.position;
             var from = transform.position + Vector3.up * 0.6f;
             var to = target.position + Vector3.up * 0.6f;
             bool inSight = !Physics.Linecast(from, to, out var hit) || hit.transform == target;
+            if (OpenWorld.InWater(target.position) && !inSight) { LostScent = true; Barking = false; return; }
+            LastScent = target.position;
             Vector3 goal;
             if (inSight) { goal = target.position; routing = detouring = false; }
             else if (detouring && Flat(detour - transform.position) > 1) goal = detour;
@@ -102,7 +105,7 @@ namespace PolicePursuit.Gameplay
                 nextBark = Time.time + BarkEvery;
                 Barked?.Invoke();
             }
-            var move = distance > HoldRange * 0.8f ? flat.normalized * Speed : Vector3.zero;
+            var move = distance > HoldRange * 0.8f ? flat.normalized * CurrentSpeed : Vector3.zero;
             if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat);
             fall = body.isGrounded ? -1 : fall - 20 * dt;
             body.Move((move + Vector3.up * fall) * dt);
@@ -155,7 +158,7 @@ namespace PolicePursuit.Gameplay
             {
                 transform.rotation = Quaternion.LookRotation(flat);
                 fall = body.isGrounded ? -1 : fall - 20 * dt;
-                body.Move((flat.normalized * Speed * 0.5f + Vector3.up * fall) * dt);
+                body.Move((flat.normalized * CurrentSpeed * 0.5f + Vector3.up * fall) * dt);
             }
             else if (!detouring) sniffed += dt;
         }
