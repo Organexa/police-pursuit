@@ -540,4 +540,14 @@ public class CoreTests
         Assert.IsFalse(OpenWorld.Hidden(far, false, true, false), "in the searchlight");
         Assert.IsFalse(OpenWorld.Hidden(OpenWorld.LoseRange - 1, false, false, false), "too close");
     }
+
+    [Test]
+    public void ShowersComeAndGo()
+    {
+        Assert.IsFalse(Weather.RainingAt(0), "a visit starts dry");
+        Assert.IsFalse(Weather.RainingAt(Weather.DryFor - 1));
+        Assert.IsTrue(Weather.RainingAt(Weather.DryFor + 1), "then a shower");
+        Assert.IsTrue(Weather.RainingAt(Weather.Cycle - 1));
+        Assert.IsFalse(Weather.RainingAt(Weather.Cycle + 1), "and dry again");
+    }
 }

@@ -164,6 +164,8 @@ namespace PolicePursuit.Gameplay
             return found;
         }
 
+        public void WashPrints() => paws.Clear();
+
         static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
         // The player's newest wet footprint, if it is close and in plain view.

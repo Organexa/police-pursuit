@@ -1542,4 +1542,38 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator RainWashesYourFootprintsAway()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        float dryFog = RenderSettings.fogEndDistance;
+        var pond = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        world.Police.Target = null;
+
+        world.Sky.Forced = true;
+        yield return null;
+        Assert.IsTrue(world.Sky.Raining);
+        Assert.IsTrue(world.Sky.Rain.isPlaying, "rain falls");
+        Assert.Less(RenderSettings.fogEndDistance, dryFog, "the fog closes in");
+
+        world.Walker.Place(pond + new Vector3(5, 0, 12), 0); // wade out north in the rain
+        world.LookYaw = 0;
+        for (float t = 0; t < 2.5f; t += Time.deltaTime) { world.Walker.Move = Vector2.up; yield return null; }
+        Assert.Greater(world.Walker.transform.position.z, pond.z + PolicePursuit.Gameplay.OpenWorld.PondHalf + 1, "out of the water");
+        Assert.AreEqual(0, world.Footprints.Showing, "no footprints in the rain");
+        Assert.IsFalse(world.Footprints.Wet);
+
+        world.Sky.Forced = false;
+        yield return null;
+        Assert.IsFalse(world.Sky.Raining);
+        Assert.AreEqual(dryFog, RenderSettings.fogEndDistance, 0.01f, "clear again");
+    }
+
 }

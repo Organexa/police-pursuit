@@ -21,15 +21,22 @@ namespace PolicePursuit.Gameplay
         {
             // Our own fog in Flat.shader: Unity's fog variants are stripped when the scene has none.
             Shader.SetGlobalColor("_NightFog", Sky);
-            Shader.SetGlobalVector("_NightFogRange", new Vector4(FogStart, 1f / (FogEnd - FogStart)));
             // Unity's own fog and light, for the models; the placeholder shader ignores both.
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = Sky;
-            RenderSettings.fogStartDistance = FogStart;
-            RenderSettings.fogEndDistance = FogEnd;
+            Fog(1);
             if (bloom == null) Build();
             (bloom.active, blur.active) = Effects(p);
+        }
+
+        // Fog distance: 1 is the normal night, less is thicker (rain).
+        public static void Fog(float reach)
+        {
+            float start = FogStart * reach, end = FogEnd * reach;
+            Shader.SetGlobalVector("_NightFogRange", new Vector4(start, 1f / (end - start)));
+            RenderSettings.fogStartDistance = start;
+            RenderSettings.fogEndDistance = end;
         }
 
         // Moonlight, a pink fill from the city and something for car paint and wet road to mirror.

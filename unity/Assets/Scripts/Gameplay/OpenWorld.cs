@@ -52,6 +52,7 @@ namespace PolicePursuit.Gameplay
         public Helicopter Heli { get; private set; }
         public PoliceDog Dog { get; private set; }
         public PrintTrail Footprints { get; private set; } // yours, for a few seconds after wading
+        public Weather Sky { get; private set; }
         bool walkerWasWet;
         public const float DogRest = 30; // after a dog loses your scent, none comes out again for this long
         float noDogUntil;
@@ -169,6 +170,9 @@ namespace PolicePursuit.Gameplay
             Heli = Helicopter.Create(transform);
             Dog = PoliceDog.Create(transform);
             Footprints = new PrintTrail(transform, 0.8f, new Vector3(0.16f, 0.01f, 0.28f));
+            Sky = new GameObject("Weather").AddComponent<Weather>();
+            Sky.transform.SetParent(transform, false);
+            Sky.Init(Core.GraphicsPresets.Load() == Core.GfxPreset.Low ? 200 : 600);
             Dog.Barked += () => Core.GameManager.Instance?.Sound?.Bark();
             var tunnelMid = (PoliceChase.Centre(TunnelFrom) + PoliceChase.Centre(TunnelTo)) / 2;
             Solid(tunnelMid + Vector3.up * TunnelRoof, new Vector3(Road + 1, 1, Pitch - Road), Shapes.Hex(0x2A2E38)).name = "Tunnel roof";
@@ -195,6 +199,7 @@ namespace PolicePursuit.Gameplay
             Mission = side == null ? null : new Mission(side.Value);
             reported = false;
             ResetCar();
+            Sky.ResetWeather(); // a fresh visit starts dry; a bust does not change the weather
             bool police = side == Mission.Role.Police, prisoner = side == Mission.Role.Prisoner;
             SirenOn = false;
             if (police) Car.AddLightBar(); // stays fitted afterwards, dark unless the siren is on
@@ -463,13 +468,14 @@ namespace PolicePursuit.Gameplay
                 }
             }
             if (cam == null) return;
+            if (Sky.Raining) { Footprints.Clear(); Dog.WashPrints(); } // rain washes every wet print away at once
             Footprints.Tick(Walker.transform, Time.deltaTime); // also in the car, so old prints still fade
             if (OnFoot)
             {
                 if (Melee.Busy || Melee.Blocking) Walker.Move = Vector2.zero; // planted while striking or guarding
                 bool wet = InWater(Walker.transform.position);
                 Walker.SpeedScale = wet ? 0.5f : 1;
-                if (walkerWasWet && !wet) Footprints.Soak(Walker.transform.position);
+                if (walkerWasWet && !wet && !Sky.Raining) Footprints.Soak(Walker.transform.position);
                 walkerWasWet = wet;
                 Walker.Tick(LookYaw, Time.deltaTime);
             }
