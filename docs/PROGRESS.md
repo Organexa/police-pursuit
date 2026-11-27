@@ -54,8 +54,9 @@ _Last updated: 2026-11-26_
 - **Google sign-in works on the phone (2026-11-27)**, reported by you. Cause: the Android OAuth client did not exist; you created it (consent screen is in Testing). No new APK was needed. Supabase then showed 1 user, 1 save and 1 score. Not checked on a phone: sign-out and back in, save restore after reinstall, leaderboard name, account deletion. A failed sign-in now shows its reason under the button, also when the player just closes the account list (soften before release). The Play Store build will need a second Android client with Google Play's app-signing SHA-1.
 - Privacy policy button added to Settings and a server-log sentence to `admin/privacy.html` (2026-11-27; EditMode 23/23, PlayMode 8/8 plus a temporary no-overlap check on a scratch copy). The link stays dead until `admin/` is published from `main`; not seen on a phone. You confirmed the contact email, the publisher name "Organexa" and the 13+ age (2026-11-27).
 - At your request (2026-11-27), builds of `main` no longer create a public GitHub Release; only `v*` tags do. Run artifacts can still be downloaded by anyone signed in to GitHub. GitHub Pages source set to GitHub Actions by you.
-- Pull request #1 merged 2026-11-27 (`1ce3586`). First deploys failed: Supabase CLI v3 made `db push` target a local database (now pinned to 2.122.1), and Pages hit GitHub's artifact-listing lag (now waits 60 s). Fixes not yet proven by a run. The backend was left unchanged.
-- Next: all F1–F14 code is written; what remains is the detailed phone checks, setup, merging to `main` and the signed release build.
+- Pull request #1 merged 2026-11-27 (`1ce3586`). First deploys failed: Supabase CLI v3 made `db push` target a local database (now pinned to 2.122.1), and Pages hit GitHub's artifact-listing lag (now waits 60 s). Fixed by pull request #2 (`00ac27f`): `deploy-backend` run 45898326883 and `deploy-admin` run 45898347487 succeeded; the three Supabase secrets work. The admin panel, privacy and deletion pages answer at https://organexa.github.io/police-pursuit/, the three functions refuse unsigned calls as expected, and no public release was created. The `main` tests and the signed APK and AAB build (run 45898277471) succeeded; the release job was skipped. Not checked: that build on a phone, the privacy button on the phone, a signed-in score upload after the redeploy, admin sign-in on the published panel.
+- Next (2026-11-27): code is merged and deployed. Waiting on you: phone check of the signed `main` build (run 45898277471: sign-in, one run uploading its score, Privacy policy button; confirmed 06:10 UTC on 27 Nov: the leaderboard showed on your phone, the sign-in refreshed, the save synced and 2 new scores arrived after the redeploy; which APK was installed and the Privacy policy button are not confirmed. Seen once: `my_rank` answered 401 when the leaderboard was opened just before the expired sign-in refreshed), then Play Console (§9), LevelPlay (§9a), Firebase (§3).
+- Fixed 2026-11-27: the leaderboard waits for an expired sign-in to renew before asking for your rank, and closing the Google account list shows no reason again (only the "reauth" setup fault does). EditMode 23/23, PlayMode 8/8 on a scratch copy; no test covers the rank wait. The test APK build (run 45950659627, commit `710aeb0`) passed and you reported both work on your phone; the rank wait after an expired sign-in may not have been exercised. Not yet in `main`.
 
 ## Decisions so far
 | Topic | Decision |
@@ -107,13 +108,13 @@ _Last updated: 2026-11-26_
 - [x] T0.3 Supabase schema (migration + RLS pgTAP tests, green in CI), 2026-11-25
 
 ## Next
-- [ ] ◐ T0.2 CI workflows pushed; Unity tests and build wait on secrets (§4, §5, deferred)
+- [x] T0.2 CI: tests, signed APK/AAB and deploys green on `main` (2026-11-27)
 - [ ] ◐ F1 Menu, play, pause, game over (code and tests done 2026-11-26; manual 60 fps phone check open)
 - [ ] ◐ F2 Tutorial (code and tests done 2026-11-26; manual first-launch phone check open)
 - [ ] ◐ F3 Garage (code and tests done 2026-11-26; premium IAP needs F10; manual phone check open)
 - [ ] ◐ F4 Settings (code and tests done 2026-11-26; privacy/account buttons need F9/F10/F13; manual phone check open)
 - [ ] ◐ F8 Offline play (queue and tests done 2026-11-26; upload needs F5/F7; manual offline phone check open)
-- [ ] ◐ F5 Google sign-in (code and tests done 2026-11-26; setup values and phone check open)
+- [ ] ◐ F5 Google sign-in (works on your phone 2026-11-27; sign-out and sign-in-again check open)
 - [ ] ◐ F6 Cloud save (code and tests done 2026-11-26; Supabase setup and phone check open)
 - [ ] ◐ F7 Leaderboard (code and tests done 2026-11-26; deploy and phone check open)
 - [ ] ◐ F11 Update notice (code and tests done 2026-11-26; real-backend and phone check open)
@@ -125,9 +126,9 @@ _Last updated: 2026-11-26_
 - [ ] ◐ GitHub setup for **Organexa** (DEPLOYMENT.md), in order:
   - [x] §1 repo `police-pursuit` created, pushed, public (2026-11-25)
   - [x] §4 secrets `UNITY_LICENSE`, `UNITY_EMAIL`, `UNITY_PASSWORD` (2026-11-26; license expires 2026-12-24)
-  - [ ] §5 secrets `GH_SECRETS_TOKEN`, `KEYSTORE_BACKUP_PASSPHRASE`, then run **create-keystore**
-  - [ ] §6 download the encrypted `keystore-backup` (kept 1 day)
+  - [x] §5 signing key created by **create-keystore** (2026-11-27); deleting `GH_SECRETS_TOKEN` and its token is not confirmed
+  - [x] §6 encrypted `keystore-backup` downloaded (reported by you)
   - [x] §2 secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`; variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` (added by you 2026-11-27; keep-alive run 45890653333 reached Supabase, so the variables work; the three secrets are untested until the first deploy)
   - [x] §8 admin user added 2026-11-27 (a separate email-and-password account, listed in `admins`); signed in to the panel run on this PC and set up 2FA (verified in Supabase). Not checked: the panel's tabs against real data.
-- [ ] Supabase setup (DEPLOYMENT §2) — I'll say when it's needed
+- [x] Supabase setup (DEPLOYMENT §2), live and deployed from `main`
 - [ ] Test, deploy, handover

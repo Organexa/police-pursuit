@@ -11,6 +11,7 @@ import androidx.credentials.CustomCredential;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.ClearCredentialException;
+import androidx.credentials.exceptions.GetCredentialCancellationException;
 import androidx.credentials.exceptions.GetCredentialException;
 
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
@@ -19,7 +20,7 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 // Called from Core/Auth.cs.
 public final class GoogleSignIn {
     public interface Callback {
-        // Exactly one of the two is non-empty.
+        // Both empty means the player closed the account list.
         void onResult(String idToken, String error);
     }
 
@@ -41,9 +42,11 @@ public final class GoogleSignIn {
 
                             @Override
                             public void onError(GetCredentialException e) {
-                                // Cancellations are reported too: Google also uses them for setup faults
-                                // such as "[16] Account reauth failed".
-                                send(callback, null, e.toString());
+                                // Closing the account list is silent. Google also "cancels" for setup
+                                // faults ("[16] Account reauth failed"), and those are shown.
+                                boolean closed = e instanceof GetCredentialCancellationException
+                                        && !e.toString().contains("reauth");
+                                send(callback, null, closed ? null : e.toString());
                             }
                         });
             } catch (Exception e) {
