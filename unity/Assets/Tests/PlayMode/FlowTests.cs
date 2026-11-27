@@ -919,4 +919,33 @@ public class FlowTests
         Assert.AreEqual(-1, car.Pedal, "and brakes hard");
     }
 
+    [UnityTest]
+    public IEnumerator CivilCarsStopForPeopleOnACrossing()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var civ = world.Traffic.Cars[2];
+        civ.Place(new Vector2Int(4, 0), new Vector2Int(4, 1)); // northbound up the east edge
+        yield return new WaitForSeconds(0.5f);
+
+        var person = PolicePursuit.Gameplay.Pedestrian.Create(world.transform, Vector3.zero, 0, 1, Color.white);
+        person.enabled = false; // stands where it is put
+        person.transform.position = civ.transform.position + civ.transform.forward * 9;
+        person.gameObject.layer = 0; // as while crossing
+        Physics.SyncTransforms();
+        // Longer than the 4 s after which a car stuck behind another car creeps on.
+        for (float t = 0; t < 6; t += Time.deltaTime) yield return null;
+        float gap = Vector3.Distance(civ.transform.position, person.transform.position);
+        Assert.Less(civ.Speed, 0.5f, "stopped");
+        Assert.Greater(gap, 3, "short of the person, and never creeps into them");
+        Assert.IsFalse(person.Diving, "never reached them");
+
+        Object.Destroy(person.gameObject);
+        for (float t = 0; t < 2; t += Time.deltaTime) yield return null;
+        Assert.Greater(civ.Speed, 1, "drives on once they have crossed");
+    }
 }

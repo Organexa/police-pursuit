@@ -118,6 +118,7 @@ namespace PolicePursuit.Gameplay
             // Queuing behind a car at a red light is not a stand-off: never creep into it.
             var front = blocked ? ahead.collider.GetComponentInParent<CivilCar>() : null;
             bool queuing = front != null && Vector3.Dot(front.transform.forward, transform.forward) > 0.5f; // same way: a queue
+            if (blocked && ahead.collider.GetComponentInParent<Pedestrian>() != null) queuing = true; // never creep into a person
             blockedFor = blocked && !queuing ? blockedFor + dt : 0;
             if (blockedFor > 4) blocked = blockedFor < 4.5f; // re-checks every 4.5 s, creeping at walking pace in between
             float cap = blockedFor > 4 ? 1.5f : Cruise;
