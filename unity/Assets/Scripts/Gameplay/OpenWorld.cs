@@ -39,6 +39,7 @@ namespace PolicePursuit.Gameplay
         public event System.Action<Mission> MissionEnded;
         public FleeDriver Fleer { get; private set; }
         public CivilTraffic Traffic { get; private set; }
+        public Pedestrians People { get; private set; }
         public bool CarLocked { get; private set; } // broken down: cannot be driven again this attempt
         GameObject garagePad, safehousePad;
         bool reported;
@@ -80,6 +81,8 @@ namespace PolicePursuit.Gameplay
             {
                 float h = 10 + (float)random.NextDouble() * 30;
                 var centre = new Vector3((x - Blocks / 2f + 0.5f) * Pitch, h / 2, (z - Blocks / 2f + 0.5f) * Pitch);
+                float pavement = Pitch - Road + Pedestrian.Pavement * 2;
+                Shapes.Box(transform, new Vector3(centre.x, 0.02f, centre.z), new Vector3(pavement, 0.04f, pavement), Shapes.Hex(0x3A3F4A));
                 var b = Solid(centre, new Vector3(Pitch - Road, h, Pitch - Road), Shapes.Navy);
                 Shapes.LightWindows(b.GetComponent<Renderer>());
             }
@@ -117,6 +120,11 @@ namespace PolicePursuit.Gameplay
             Traffic.Player = Car.transform;
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
+            People = new GameObject("Pedestrians").AddComponent<Pedestrians>();
+            People.transform.SetParent(transform, false);
+            People.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()));
+            People.PoliceCar = Police.transform;
+            People.PlayerCar = Car;
             Fleer = VehicleController.Create(transform, Mission.FleeSpawn, Shapes.Hex(0xFF8A00)).gameObject.AddComponent<FleeDriver>();
             Begin(null);
         }

@@ -11,6 +11,7 @@ namespace PolicePursuit.Gameplay
         public int Ammo { get; private set; }
         public bool Reloading => reloadLeft > 0;
         public event Action Fired;
+        public static event Action<Vector3> AnyShot; // where a shot was fired, for bystanders to hear
 
         float cooldown, reloadLeft, flashLeft, sparkLeft;
         Health own;
@@ -67,6 +68,7 @@ namespace PolicePursuit.Gameplay
             flashLeft = 0.05f;
             if (Ammo == 0) Reload();
             Fired?.Invoke();
+            AnyShot?.Invoke(origin);
             return true;
         }
 

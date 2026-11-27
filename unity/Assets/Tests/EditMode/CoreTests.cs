@@ -414,4 +414,20 @@ public class CoreTests
             Assert.That(next.y, Is.InRange(0, 4));
         }
     }
+
+    [Test]
+    public void PedestrianLoopGoesRoundTheBlock()
+    {
+        var c = new Vector3(10, 0, 20);
+        Assert.AreEqual(c + new Vector3(-5, 0, -5), Pedestrian.Loop(c, 5, 0));
+        Assert.AreEqual(c + new Vector3(5, 0, -5), Pedestrian.Loop(c, 5, 10));
+        Assert.AreEqual(c + new Vector3(5, 0, 5), Pedestrian.Loop(c, 5, 20));
+        Assert.AreEqual(c + new Vector3(-5, 0, 5), Pedestrian.Loop(c, 5, 30));
+        Assert.AreEqual(Pedestrian.Loop(c, 5, 3), Pedestrian.Loop(c, 5, 43), "wraps round");
+        Assert.AreEqual(Pedestrian.Loop(c, 5, 37), Pedestrian.Loop(c, 5, -3), "and backwards");
+        // The walking line is on the pavement: outside the building, inside the kerb, clear of the traffic lanes.
+        float buildingHalf = (OpenWorld.Pitch - OpenWorld.Road) / 2;
+        Assert.That(Pedestrian.WalkHalf, Is.InRange(buildingHalf + 0.4f, buildingHalf + Pedestrian.Pavement - 0.4f));
+        Assert.Greater(OpenWorld.Pitch / 2 - Pedestrian.WalkHalf - 0.3f, CivilCar.Lane + 0.9f, "a car in its lane never reaches the pavement");
+    }
 }

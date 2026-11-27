@@ -594,4 +594,51 @@ public class FlowTests
         Assert.IsTrue(civ.Crashed, "a hard hit knocks it loose");
         Assert.IsFalse(civ.Body.isKinematic);
     }
+
+    [UnityTest]
+    public IEnumerator OpenWorldPedestriansWalkPanicAndCannotBeHurt()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var people = world.People.People;
+        Assert.AreEqual(GraphicsPresets.MaxCars(GraphicsPresets.Load()), people.Count);
+
+        var starts = people.ConvertAll(p => p.transform.position);
+        yield return new WaitForSeconds(2);
+        float half = PolicePursuit.Gameplay.Pedestrian.WalkHalf;
+        for (int i = 0; i < people.Count; i++)
+        {
+            var p = people[i];
+            Assert.Greater(Vector3.Distance(p.transform.position, starts[i]), 1, "walks");
+            var off = p.transform.position - p.Block;
+            float ring = Mathf.Max(Mathf.Abs(off.x), Mathf.Abs(off.z));
+            Assert.AreEqual(half, ring, 0.8f, "stays on the pavement");
+        }
+
+        // Shots pass through them and they are never a target.
+        var walker = people[0];
+        var off0 = walker.transform.position - walker.Block;
+        var outward = Mathf.Abs(off0.x) > Mathf.Abs(off0.z) ? new Vector3(Mathf.Sign(off0.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off0.z));
+        var from = walker.transform.position + outward * 3 + Vector3.up * 1.2f; // from the road side
+        var to = walker.transform.position + Vector3.up * 1.2f;
+        Assert.IsFalse(Physics.Raycast(from, (to - from).normalized, out var hit, 3.2f) && hit.collider.GetComponentInParent<PolicePursuit.Gameplay.Pedestrian>() != null);
+        Assert.IsNull(walker.GetComponentInParent<PolicePursuit.Gameplay.IDamageable>());
+
+        Assert.IsTrue(world.ExitCar());
+        world.Walker.Place(walker.transform.position + outward * 3, 0);
+        Assert.IsFalse(walker.Panicking);
+        for (int i = 0; i < 3; i++) { world.Shoot(); yield return new WaitForSeconds(0.35f); }
+        Assert.IsTrue(walker.Panicking, "gunfire nearby sends people running");
+        Assert.Greater(walker.Speed, PolicePursuit.Gameplay.Pedestrian.WalkSpeed);
+
+        var other = people[1];
+        world.Car.Place(other.transform.position + Vector3.up * 0.6f, 0); // a car right on the pavement
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        Assert.IsTrue(other.Diving, "dives clear of a car");
+    }
 }
