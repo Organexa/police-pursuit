@@ -1299,4 +1299,42 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator YouCanJumpTheParkFenceAndTheDogCannot()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var park = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        float fence = PolicePursuit.Gameplay.OpenWorld.FenceHalf;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        // Inside the park, 1.5 m short of the north fence, facing it: a running jump clears 0.7 m from there.
+        world.Walker.Place(park + new Vector3(0, 0, fence - 1.5f), 0);
+        world.LookYaw = 0;
+        world.Police.enabled = false; // drives into the park through its open south side and lets the dog out
+        police.Pedal = police.Steer = 0;
+        police.Place(park + new Vector3(0, 0.6f, -5), 0); // within the dog's 40 m release range
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.gameObject.activeSelf);
+
+        world.Walker.Jump = true;
+        for (float t = 0; t < 0.8f; t += Time.deltaTime)
+        {
+            world.Walker.Move = Vector2.up;
+            yield return null;
+        }
+        Assert.Greater(world.Walker.transform.position.z, park.z + fence + 0.2f, "over the fence");
+
+        // Stand still on the far side: the dog runs up to the fence and cannot get over it.
+        for (float t = 0; t < 4; t += Time.deltaTime) yield return null;
+        Assert.Less(dog.transform.position.z, park.z + fence, "still on the park side");
+        Assert.AreEqual(0, dog.HoldProgress, "cannot reach you");
+        world.Police.enabled = true;
+    }
 }

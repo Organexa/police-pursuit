@@ -58,6 +58,9 @@ namespace PolicePursuit.Gameplay
         public static readonly Vector2Int ParkBlock = new Vector2Int(2, 1);
         public const float PondHalf = 14;
         public static Vector3 ParkCentre => new Vector3((ParkBlock.x - Blocks / 2f + 0.5f) * Pitch, 0, (ParkBlock.y - Blocks / 2f + 0.5f) * Pitch);
+        // Low fences on the park's north and west sides: you can jump them, a police dog cannot.
+        public const float FenceHeight = 0.7f, FenceInset = 0.5f;
+        public static float FenceHalf => (Pitch - Road) / 2 - FenceInset; // from the park centre
         public static bool InWater(Vector3 p) => Mathf.Abs(p.x - ParkCentre.x) < PondHalf && Mathf.Abs(p.z - ParkCentre.z) < PondHalf;
 
         // One covered road: from the west-centre crossroads north to the next one. The helicopter cannot see into it.
@@ -118,6 +121,9 @@ namespace PolicePursuit.Gameplay
                 {
                     Shapes.Box(transform, new Vector3(centre.x, 0.03f, centre.z), new Vector3(Pitch - Road, 0.04f, Pitch - Road), Shapes.Hex(0x1F3A24));
                     Shapes.Box(transform, new Vector3(centre.x, 0.05f, centre.z), new Vector3(PondHalf * 2, 0.04f, PondHalf * 2), Shapes.Hex(0x1C4E80), glow: 0.3f).name = "Pond";
+                    float f = FenceHalf, len = f * 2;
+                    Solid(new Vector3(centre.x, FenceHeight / 2, centre.z + f), new Vector3(len, FenceHeight, 0.15f), Shapes.Hex(0x8A8F99)).name = "Fence north";
+                    Solid(new Vector3(centre.x - f, FenceHeight / 2, centre.z), new Vector3(0.15f, FenceHeight, len), Shapes.Hex(0x8A8F99)).name = "Fence west";
                     continue;
                 }
                 var b = Solid(centre, new Vector3(Pitch - Road, h, Pitch - Road), Shapes.Navy);
