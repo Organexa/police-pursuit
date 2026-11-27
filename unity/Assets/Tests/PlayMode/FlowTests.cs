@@ -632,6 +632,7 @@ public class FlowTests
         Assert.IsNull(walker.GetComponentInParent<PolicePursuit.Gameplay.IDamageable>());
 
         Assert.IsTrue(world.ExitCar());
+        world.Police.Target = null; // getting out points the police (and their dog) at you
         world.Walker.Place(walker.transform.position + outward * 3, 0);
         Assert.IsFalse(walker.Panicking);
         for (int i = 0; i < 3; i++) { world.Shoot(); yield return new WaitForSeconds(0.35f); }
@@ -1181,6 +1182,46 @@ public class FlowTests
         world.Car.Place(PolicePursuit.Gameplay.PoliceChase.Centre(PolicePursuit.Gameplay.OpenWorld.TunnelTo) + Vector3.up * 0.6f, 0);
         yield return null;
         Assert.IsTrue(heli.CanSee, "out the other end: seen again");
+        world.Police.enabled = true;
+    }
+
+    [UnityTest]
+    public IEnumerator PoliceDogChasesYouOnFoot()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        world.Police.enabled = false; // the police car stops 20 m off and lets the dog out
+        police.Pedal = police.Steer = 0;
+        police.Place(world.Walker.transform.position - Vector3.forward * 20 + Vector3.up * 0.6f, 0);
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.gameObject.activeSelf, "a dog comes out when you are on foot close by");
+        Assert.IsNull(dog.GetComponentInParent<PolicePursuit.Gameplay.IDamageable>(), "it cannot be hurt");
+
+        // Sprinting away: it falls behind, slowly.
+        float gapBefore = Vector3.Distance(dog.transform.position, world.Walker.transform.position);
+        for (float t = 0; t < 1.5f; t += Time.deltaTime) { yield return null; }
+        float caughtUp = Vector3.Distance(dog.transform.position, world.Walker.transform.position);
+        Assert.Less(caughtUp, gapBefore, "it runs at you");
+        for (float t = 0; t < 2; t += Time.deltaTime)
+        {
+            world.Walker.Move = Vector2.up;
+            world.Walker.Sprint = true;
+            yield return null;
+        }
+        Assert.Greater(Vector3.Distance(dog.transform.position, world.Walker.transform.position), caughtUp, "a sprint outruns it");
+        int busts = world.Busts;
+        // Standing still: it holds you, which is a bust.
+        for (float t = 0; t < 8 && world.Busts == busts; t += Time.deltaTime) yield return null;
+        Assert.AreEqual(busts + 1, world.Busts, "held by the dog");
+        Assert.IsFalse(dog.gameObject.activeSelf, "and it goes back after");
         world.Police.enabled = true;
     }
 

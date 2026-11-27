@@ -50,6 +50,7 @@ namespace PolicePursuit.Gameplay
         public float ChaseTime { get; set; } // settable so tests (and later, missions) can start a chase hot
         public int Wanted => Chased ? Core.WantedLevel.ForDuration(ChaseTime) : 0;
         public Helicopter Heli { get; private set; }
+        public PoliceDog Dog { get; private set; }
 
         // One covered road: from the west-centre crossroads north to the next one. The helicopter cannot see into it.
         public static readonly Vector2Int TunnelFrom = new Vector2Int(1, 2), TunnelTo = new Vector2Int(1, 3);
@@ -144,6 +145,7 @@ namespace PolicePursuit.Gameplay
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
             Heli = Helicopter.Create(transform);
+            Dog = PoliceDog.Create(transform);
             var tunnelMid = (PoliceChase.Centre(TunnelFrom) + PoliceChase.Centre(TunnelTo)) / 2;
             Solid(tunnelMid + Vector3.up * TunnelRoof, new Vector3(Road + 1, 1, Pitch - Road), Shapes.Hex(0x2A2E38)).name = "Tunnel roof";
             Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
@@ -290,8 +292,24 @@ namespace PolicePursuit.Gameplay
             Block.ResetBlock();
             ChaseTime = loseTime = 0;
             Heli.Leave();
+            Dog.Recall();
             Traffic.ResetTraffic();
             bustTime = cuffTime = 0;
+        }
+
+        // A dog comes out of the chasing police car when you are on foot close by; it holding you is a bust.
+        bool TickDog()
+        {
+            bool chasingOnFoot = OnFoot && Chased;
+            if (!chasingOnFoot) { if (Dog.gameObject.activeSelf) Dog.Recall(); return false; }
+            var car = Police.transform;
+            if (!Dog.gameObject.activeSelf && Vector3.Distance(car.position, Walker.transform.position) < PoliceDog.ReleaseRange)
+                Dog.Release(new Vector3(car.position.x, 0.1f, car.position.z) - car.right * 2, Walker.transform, Melee);
+            if (!Dog.Holding) return false;
+            Busts++;
+            if (Mission != null) Mission.End(Mission.Outcome.Busted);
+            else ResetCar();
+            return true;
         }
 
         void TickWanted(float dt)
@@ -343,6 +361,7 @@ namespace PolicePursuit.Gameplay
             People.PlayerSiren = SirenOn;
             Fleer.Scared = SirenOn && Vector3.Distance(Car.transform.position, Fleer.transform.position) < FleeDriver.SpookRange;
             if (Mission != null && Mission.Result != Mission.Outcome.None) return;
+            if (TickDog()) return;
             bool held = (Police.gameObject.activeSelf || Block.Chasing) && PoliceDistance < BustRange && PlayerSpeed < BustSpeed;
             bustTime = held ? bustTime + Time.deltaTime : 0;
             if (bustTime < BustTime) return;

@@ -348,6 +348,7 @@ namespace PolicePursuit.UI
                 : $"{world.Objective}   {Mathf.CeilToInt(Mathf.Max(0, Gameplay.Mission.TimeLimit - m.Elapsed))} s";
             if (m != null && m.Elapsed < m.MessageUntil) { bustText.text = m.Message; return; }
             bustText.text = world.ArrestProgress > 0 ? $"HANDCUFFING {Mathf.RoundToInt(world.ArrestProgress * 100)}%"
+                : world.Dog.HoldProgress > 0 ? $"THE POLICE DOG HAS YOU {Mathf.RoundToInt(world.Dog.HoldProgress * 100)}%"
                 : world.BustProgress > 0 ? $"PULLING YOU OVER {Mathf.RoundToInt(world.BustProgress * 100)}%"
                 : world.Deliveries > 0 ? $"Suspects delivered {world.Deliveries}"
                 : world.Busts > 0 ? $"Busted {world.Busts}x" : "";
