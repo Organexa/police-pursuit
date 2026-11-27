@@ -1337,4 +1337,39 @@ public class FlowTests
         Assert.AreEqual(0, dog.HoldProgress, "cannot reach you");
         world.Police.enabled = true;
     }
+    [UnityTest]
+    public IEnumerator PoliceDogFindsItsWayRoundTheFence()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var park = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        float fence = PolicePursuit.Gameplay.OpenWorld.FenceHalf;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        // You stand just over the north fence; the dog starts inside the park, right behind it.
+        world.Walker.Place(park + new Vector3(0, 0, fence + 1.5f), 0);
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        police.Place(park + new Vector3(0, 0.6f, -5), 0); // within the dog's 40 m release range
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.gameObject.activeSelf);
+        dog.Release(park + new Vector3(0, 0.1f, fence - 2), world.Walker.transform, world.Melee);
+
+        int busts = world.Busts;
+        float closest = float.MaxValue;
+        for (float t = 0; t < 20 && world.Busts == busts; t += Time.deltaTime)
+        {
+            if (dog.gameObject.activeSelf) closest = Mathf.Min(closest, Vector3.Distance(dog.transform.position, world.Walker.transform.position));
+            yield return null;
+        }
+        Assert.Less(closest, PolicePursuit.Gameplay.PoliceDog.HoldRange, "it ran round the open end of the fence to you");
+        world.Police.enabled = true;
+    }
+
 }

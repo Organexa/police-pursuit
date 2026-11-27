@@ -27,7 +27,9 @@ namespace PolicePursuit.Gameplay
         Transform target;
         MeleeController targetMelee;
         Vector2Int next;
-        bool routing;
+        bool routing, detouring;
+        Vector3 detour;
+        public const float CornerMargin = 1.5f;
         float held, fall;
 
         public static PoliceDog Create(Transform parent)
@@ -78,9 +80,12 @@ namespace PolicePursuit.Gameplay
             var to = target.position + Vector3.up * 0.6f;
             bool inSight = !Physics.Linecast(from, to, out var hit) || hit.transform == target;
             Vector3 goal;
-            if (inSight) { goal = target.position; routing = false; }
+            if (inSight) { goal = target.position; routing = detouring = false; }
+            else if (detouring && Flat(detour - transform.position) > 1) goal = detour;
+            else if (Detour(hit.collider, target.position, out detour)) { detouring = true; goal = detour; }
             else
             {
+                detouring = false;
                 if (!routing) { next = PoliceChase.Node(transform.position); routing = true; }
                 var c = PoliceChase.Centre(next);
                 if (new Vector2(c.x - transform.position.x, c.z - transform.position.z).magnitude < 3)
@@ -106,11 +111,45 @@ namespace PolicePursuit.Gameplay
             held = distance < HoldRange && !dodging ? held + dt : 0;
         }
 
+        // Round whatever is in the way: the corner of its footprint (plus a margin) that the dog can run to in a
+        // straight line and that makes the shortest trip to the player. A fence's open end, a building's corner.
+        bool Detour(Collider blocker, Vector3 destination, out Vector3 corner)
+        {
+            corner = default;
+            if (blocker == null) return false;
+            var b = blocker.bounds;
+            float best = float.MaxValue;
+            bool found = false;
+            var eye = transform.position + Vector3.up * 0.6f;
+            foreach (var c in new[]
+            {
+                new Vector3(b.min.x - CornerMargin, 0, b.min.z - CornerMargin), new Vector3(b.min.x - CornerMargin, 0, b.max.z + CornerMargin),
+                new Vector3(b.max.x + CornerMargin, 0, b.min.z - CornerMargin), new Vector3(b.max.x + CornerMargin, 0, b.max.z + CornerMargin),
+            })
+            {
+                var at = new Vector3(c.x, transform.position.y, c.z);
+                if (Flat(at - transform.position) < 1) continue; // already there
+                if (Physics.Linecast(eye, at + Vector3.up * 0.6f, out var h) && h.transform != target) continue;
+                float trip = Flat(at - transform.position) + Flat(destination - at);
+                if (trip < best) { best = trip; corner = at; found = true; }
+            }
+            return found;
+        }
+
+        static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+
         // Trots to the last place it had the scent and noses about there.
         void Sniff(float dt)
         {
             held = 0;
-            var flat = LastScent - transform.position;
+            // Round anything in the way, just as when chasing: a fence must not pin it in place for good.
+            var eye = transform.position + Vector3.up * 0.6f;
+            var spot = LastScent;
+            if (detouring && Flat(detour - transform.position) > 1) spot = detour;
+            else if (Physics.Linecast(eye, LastScent + Vector3.up * 0.6f, out var block) && block.transform != target
+                     && Detour(block.collider, LastScent, out detour)) { detouring = true; spot = detour; }
+            else detouring = false;
+            var flat = spot - transform.position;
             flat.y = 0;
             if (flat.magnitude > 0.5f)
             {
@@ -118,7 +157,7 @@ namespace PolicePursuit.Gameplay
                 fall = body.isGrounded ? -1 : fall - 20 * dt;
                 body.Move((flat.normalized * Speed * 0.5f + Vector3.up * fall) * dt);
             }
-            else sniffed += dt;
+            else if (!detouring) sniffed += dt;
         }
     }
 }
