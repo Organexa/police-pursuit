@@ -12,6 +12,7 @@ namespace PolicePursuit.Gameplay
         public Vector2 Move { get; set; } // stick or keys, -1..1 each axis
         public bool Sprint { get; set; }
         public bool Jump { get; set; }
+        public float SpeedScale { get; set; } = 1; // wading halves it
         public float Speed { get; private set; } // horizontal m/s
         public CharacterController Body { get; private set; }
         float fall;
@@ -47,6 +48,7 @@ namespace PolicePursuit.Gameplay
             float speed = input.magnitude < 0.1f ? 0
                 : Sprint ? SprintSpeed
                 : input.magnitude > 0.8f ? RunSpeed : WalkSpeed;
+            speed *= SpeedScale;
             var dir = Quaternion.Euler(0, cameraYaw, 0) * new Vector3(input.x, 0, input.y).normalized;
             if (speed > 0)
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(dir), 1 - Mathf.Exp(-12 * dt));

@@ -519,4 +519,15 @@ public class CoreTests
         Assert.IsFalse(OpenWorld.InTunnel(Vector3.zero));
     }
 
+    [Test]
+    public void PondIsInTheParkBlock()
+    {
+        var c = OpenWorld.ParkCentre;
+        Assert.IsTrue(OpenWorld.InWater(c));
+        Assert.IsTrue(OpenWorld.InWater(c + new Vector3(OpenWorld.PondHalf - 1, 0, 0)));
+        Assert.IsFalse(OpenWorld.InWater(c + new Vector3(OpenWorld.PondHalf + 1, 0, 0)), "dry grass round it");
+        float block = (OpenWorld.Pitch - OpenWorld.Road) / 2;
+        Assert.Less(OpenWorld.PondHalf, block, "inside the block, off the roads");
+    }
+
 }

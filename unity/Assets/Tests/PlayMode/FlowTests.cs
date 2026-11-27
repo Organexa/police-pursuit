@@ -1225,4 +1225,46 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator PoliceDogLosesYourScentInWater()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        var shore = PolicePursuit.Gameplay.OpenWorld.ParkCentre + new Vector3(PolicePursuit.Gameplay.OpenWorld.PondHalf + 3, 0, 0);
+        world.Walker.Place(shore, 0);
+        world.Police.enabled = false; // parks 20 m off and lets the dog out
+        police.Pedal = police.Steer = 0;
+        police.Place(shore - Vector3.forward * 20 + Vector3.up * 0.6f, 0);
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.gameObject.activeSelf);
+        int busts = world.Busts;
+
+        world.Walker.Place(PolicePursuit.Gameplay.OpenWorld.ParkCentre, 0); // into the pond
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.LostScent, "water breaks the trail");
+        Assert.AreEqual(0.5f, world.Walker.SpeedScale, "wading is slow");
+        Assert.AreEqual(shore.x, dog.LastScent.x, 0.5f, "it goes to where it last had the scent");
+
+        Time.timeScale = 4;
+        for (float t = 0; t < 20 && dog.gameObject.activeSelf; t += Time.deltaTime) yield return null;
+        Assert.IsFalse(dog.gameObject.activeSelf, "gives up after a sniff around");
+        Assert.AreEqual(busts, world.Busts, "and never held you");
+
+        world.Walker.Place(shore, 0); // back on the grass, still near the police car
+        for (float t = 0; t < 2; t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsFalse(dog.gameObject.activeSelf, "no fresh dog straight away");
+        Assert.AreEqual(1f, world.Walker.SpeedScale, "full speed out of the water");
+        world.Police.enabled = true;
+    }
+
 }

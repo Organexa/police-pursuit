@@ -5,6 +5,7 @@ namespace PolicePursuit.Gameplay
     // A police dog released from the chasing police car when the player is on foot nearby. It runs straight at the
     // player when in sight, otherwise crossroads to crossroads, and holds the player (a bust, no injury shown) if it
     // stays right beside them for a second. Sprinting outruns it slowly; a dodge breaks its hold.
+    // Water breaks the trail: once the player wades in, it goes to where it last had the scent, waits, and gives up.
     // It cannot be hurt: no Health, so neither shots nor fists affect it.
     // shortcut: a box figure, no animation or barking.
     public class PoliceDog : MonoBehaviour
@@ -12,6 +13,11 @@ namespace PolicePursuit.Gameplay
         public const float Speed = 6.5f, ReleaseRange = 40, HoldRange = 1.2f, HoldFor = 1;
         public float HoldProgress => held / HoldFor;
         public bool Holding => held >= HoldFor;
+        public const float SniffFor = 6;
+        public bool LostScent { get; private set; }
+        public bool GaveUp => LostScent && sniffed > SniffFor;
+        public Vector3 LastScent { get; private set; }
+        float sniffed;
         CharacterController body;
         Transform target;
         MeleeController targetMelee;
@@ -42,20 +48,26 @@ namespace PolicePursuit.Gameplay
             target = player;
             targetMelee = playerMelee;
             routing = false;
-            held = fall = 0;
+            held = fall = sniffed = 0;
+            LostScent = false;
+            LastScent = player.position;
             gameObject.SetActive(true);
         }
 
         public void Recall()
         {
             gameObject.SetActive(false);
-            held = 0;
+            held = sniffed = 0;
+            LostScent = false; // a stale "gave up" would keep every later dog in the car
         }
 
         void Update()
         {
             if (target == null) return;
             float dt = Time.deltaTime;
+            if (!LostScent && OpenWorld.InWater(target.position)) LostScent = true;
+            if (LostScent) { Sniff(dt); return; }
+            LastScent = target.position;
             var from = transform.position + Vector3.up * 0.6f;
             var to = target.position + Vector3.up * 0.6f;
             bool inSight = !Physics.Linecast(from, to, out var hit) || hit.transform == target;
@@ -80,6 +92,21 @@ namespace PolicePursuit.Gameplay
 
             bool dodging = targetMelee != null && targetMelee.Dodging;
             held = distance < HoldRange && !dodging ? held + dt : 0;
+        }
+
+        // Trots to the last place it had the scent and noses about there.
+        void Sniff(float dt)
+        {
+            held = 0;
+            var flat = LastScent - transform.position;
+            flat.y = 0;
+            if (flat.magnitude > 0.5f)
+            {
+                transform.rotation = Quaternion.LookRotation(flat);
+                fall = body.isGrounded ? -1 : fall - 20 * dt;
+                body.Move((flat.normalized * Speed * 0.5f + Vector3.up * fall) * dt);
+            }
+            else sniffed += dt;
         }
     }
 }

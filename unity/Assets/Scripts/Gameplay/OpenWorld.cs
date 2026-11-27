@@ -51,6 +51,14 @@ namespace PolicePursuit.Gameplay
         public int Wanted => Chased ? Core.WantedLevel.ForDuration(ChaseTime) : 0;
         public Helicopter Heli { get; private set; }
         public PoliceDog Dog { get; private set; }
+        public const float DogRest = 30; // after a dog loses your scent, none comes out again for this long
+        float noDogUntil;
+
+        // A park with a pond in place of one building, south-east of the centre. Wading is slow; dogs lose the scent.
+        public static readonly Vector2Int ParkBlock = new Vector2Int(2, 1);
+        public const float PondHalf = 14;
+        public static Vector3 ParkCentre => new Vector3((ParkBlock.x - Blocks / 2f + 0.5f) * Pitch, 0, (ParkBlock.y - Blocks / 2f + 0.5f) * Pitch);
+        public static bool InWater(Vector3 p) => Mathf.Abs(p.x - ParkCentre.x) < PondHalf && Mathf.Abs(p.z - ParkCentre.z) < PondHalf;
 
         // One covered road: from the west-centre crossroads north to the next one. The helicopter cannot see into it.
         public static readonly Vector2Int TunnelFrom = new Vector2Int(1, 2), TunnelTo = new Vector2Int(1, 3);
@@ -106,6 +114,12 @@ namespace PolicePursuit.Gameplay
                 var centre = new Vector3((x - Blocks / 2f + 0.5f) * Pitch, h / 2, (z - Blocks / 2f + 0.5f) * Pitch);
                 float pavement = Pitch - Road + Pedestrian.Pavement * 2;
                 Shapes.Box(transform, new Vector3(centre.x, 0.02f, centre.z), new Vector3(pavement, 0.04f, pavement), Shapes.Hex(0x3A3F4A));
+                if (new Vector2Int(x, z) == ParkBlock)
+                {
+                    Shapes.Box(transform, new Vector3(centre.x, 0.03f, centre.z), new Vector3(Pitch - Road, 0.04f, Pitch - Road), Shapes.Hex(0x1F3A24));
+                    Shapes.Box(transform, new Vector3(centre.x, 0.05f, centre.z), new Vector3(PondHalf * 2, 0.04f, PondHalf * 2), Shapes.Hex(0x1C4E80), glow: 0.3f).name = "Pond";
+                    continue;
+                }
                 var b = Solid(centre, new Vector3(Pitch - Road, h, Pitch - Road), Shapes.Navy);
                 Shapes.LightWindows(b.GetComponent<Renderer>());
             }
@@ -293,6 +307,7 @@ namespace PolicePursuit.Gameplay
             ChaseTime = loseTime = 0;
             Heli.Leave();
             Dog.Recall();
+            noDogUntil = 0;
             Traffic.ResetTraffic();
             bustTime = cuffTime = 0;
         }
@@ -303,7 +318,9 @@ namespace PolicePursuit.Gameplay
             bool chasingOnFoot = OnFoot && Chased;
             if (!chasingOnFoot) { if (Dog.gameObject.activeSelf) Dog.Recall(); return false; }
             var car = Police.transform;
-            if (!Dog.gameObject.activeSelf && Vector3.Distance(car.position, Walker.transform.position) < PoliceDog.ReleaseRange)
+            if (Dog.GaveUp) { Dog.Recall(); noDogUntil = Time.time + DogRest; return false; }
+            if (!Dog.gameObject.activeSelf && Time.time >= noDogUntil
+                && Vector3.Distance(car.position, Walker.transform.position) < PoliceDog.ReleaseRange)
                 Dog.Release(new Vector3(car.position.x, 0.1f, car.position.z) - car.right * 2, Walker.transform, Melee);
             if (!Dog.Holding) return false;
             Busts++;
@@ -433,6 +450,7 @@ namespace PolicePursuit.Gameplay
             if (OnFoot)
             {
                 if (Melee.Busy || Melee.Blocking) Walker.Move = Vector2.zero; // planted while striking or guarding
+                Walker.SpeedScale = InWater(Walker.transform.position) ? 0.5f : 1;
                 Walker.Tick(LookYaw, Time.deltaTime);
             }
             var goal = CamGoal(out var look);
