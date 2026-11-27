@@ -342,7 +342,8 @@ namespace PolicePursuit.UI
             var m = world.Mission;
             int wanted = world.Wanted;
             wantedText.text = wanted == 0 ? "" : "WANTED " + new string('*', wanted) + new string('-', 5 - wanted)
-                + (world.Heli.Overhead ? (world.Heli.InBeam(world.Player.position) ? "   IN THE SEARCHLIGHT" : "   HELICOPTER") : "");
+                + (!world.Heli.Overhead ? "" : !world.Heli.CanSee ? "   HELICOPTER LOST YOU"
+                    : world.Heli.InBeam(world.Player.position) ? "   IN THE SEARCHLIGHT" : "   HELICOPTER");
             objectiveText.text = m == null ? world.Objective
                 : $"{world.Objective}   {Mathf.CeilToInt(Mathf.Max(0, Gameplay.Mission.TimeLimit - m.Elapsed))} s";
             if (m != null && m.Elapsed < m.MessageUntil) { bustText.text = m.Message; return; }

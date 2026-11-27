@@ -50,6 +50,17 @@ namespace PolicePursuit.Gameplay
         public float ChaseTime { get; set; } // settable so tests (and later, missions) can start a chase hot
         public int Wanted => Chased ? Core.WantedLevel.ForDuration(ChaseTime) : 0;
         public Helicopter Heli { get; private set; }
+
+        // One covered road: from the west-centre crossroads north to the next one. The helicopter cannot see into it.
+        public static readonly Vector2Int TunnelFrom = new Vector2Int(1, 2), TunnelTo = new Vector2Int(1, 3);
+        public const float TunnelRoof = 5.5f;
+        public static bool InTunnel(Vector3 p)
+        {
+            var a = PoliceChase.Centre(TunnelFrom);
+            var b = PoliceChase.Centre(TunnelTo);
+            float half = Road / 2;
+            return p.x > a.x - half && p.x < a.x + half && p.z > a.z + half && p.z < b.z - half;
+        }
         float loseTime;
         public bool CarLocked { get; private set; } // broken down: cannot be driven again this attempt
         GameObject garagePad, safehousePad;
@@ -133,6 +144,8 @@ namespace PolicePursuit.Gameplay
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
             Heli = Helicopter.Create(transform);
+            var tunnelMid = (PoliceChase.Centre(TunnelFrom) + PoliceChase.Centre(TunnelTo)) / 2;
+            Solid(tunnelMid + Vector3.up * TunnelRoof, new Vector3(Road + 1, 1, Pitch - Road), Shapes.Hex(0x2A2E38)).name = "Tunnel roof";
             Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
             Block.transform.SetParent(transform, false);
             Block.Init();
@@ -292,7 +305,7 @@ namespace PolicePursuit.Gameplay
             {
                 if (!Heli.gameObject.activeSelf) Heli.Arrive(Player.position);
                 var velocity = OnFoot ? Walker.transform.forward * Walker.Speed : Car.Body.linearVelocity;
-                Heli.Tick(Player.position, velocity, dt);
+                Heli.Tick(Player.position, velocity, dt, !InTunnel(Player.position));
             }
             else if (Heli.gameObject.activeSelf) Heli.Leave();
         }

@@ -13,6 +13,7 @@ namespace PolicePursuit.Gameplay
         public Vector3 Watching { get; private set; } // ground point under the beam
         public bool Overhead { get; private set; } // arrived above its spot, beam on
         public Light Beam { get; private set; }
+        public bool CanSee { get; private set; } = true; // false while the player is hidden from the air (a tunnel)
         Transform rotor;
 
         public static Helicopter Create(Transform parent)
@@ -61,9 +62,11 @@ namespace PolicePursuit.Gameplay
             return new Vector3(player.x, 0, player.z) + ahead;
         }
 
-        public void Tick(Vector3 player, Vector3 velocity, float dt)
+        // Hidden from the air, the beam holds on the last place it saw the player.
+        public void Tick(Vector3 player, Vector3 velocity, float dt, bool canSee = true)
         {
-            var target = Aim(player, velocity);
+            CanSee = canSee;
+            var target = canSee ? Aim(player, velocity) : Watching;
             Watching = Vector3.MoveTowards(Watching, target, TrackSpeed * dt);
             var over = Watching + Vector3.up * Height;
             transform.position = Vector3.MoveTowards(transform.position, over, (Overhead ? TrackSpeed * 1.5f : FlyInSpeed) * dt);
@@ -78,7 +81,7 @@ namespace PolicePursuit.Gameplay
         // True when the player stands or drives inside the lit circle.
         public bool InBeam(Vector3 player)
         {
-            if (!Overhead) return false;
+            if (!Overhead || !CanSee) return false;
             float radius = Height * Mathf.Tan(Beam.spotAngle * 0.5f * Mathf.Deg2Rad);
             return Vector2.Distance(new Vector2(player.x, player.z), new Vector2(Watching.x, Watching.z)) < radius;
         }

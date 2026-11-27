@@ -508,4 +508,15 @@ public class CoreTests
         Assert.AreEqual(new Vector3(5, 0, 7), Helicopter.Aim(new Vector3(5, 1, 7), Vector3.zero), "standing still: straight down on you");
     }
 
+    [Test]
+    public void TunnelCoversOneRoad()
+    {
+        var mid = (PoliceChase.Centre(OpenWorld.TunnelFrom) + PoliceChase.Centre(OpenWorld.TunnelTo)) / 2;
+        Assert.IsTrue(OpenWorld.InTunnel(mid));
+        Assert.IsTrue(OpenWorld.InTunnel(mid + new Vector3(CivilCar.Lane, 0, 15)), "both lanes, most of its length");
+        Assert.IsFalse(OpenWorld.InTunnel(PoliceChase.Centre(OpenWorld.TunnelFrom)), "open sky over the crossroads");
+        Assert.IsFalse(OpenWorld.InTunnel(mid + new Vector3(10, 0, 0)), "not beside it");
+        Assert.IsFalse(OpenWorld.InTunnel(Vector3.zero));
+    }
+
 }

@@ -1148,4 +1148,40 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator HelicopterLosesYouInTheTunnel()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var heli = world.Heli;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        var entrance = PolicePursuit.Gameplay.PoliceChase.Centre(PolicePursuit.Gameplay.OpenWorld.TunnelFrom);
+        world.Car.Place(entrance + Vector3.up * 0.6f, 0); // just outside the tunnel mouth
+        world.ChaseTime = 95;
+        Time.timeScale = 4;
+        for (float t = 0; t < 20 && !heli.InBeam(world.Player.position); t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsTrue(heli.InBeam(world.Player.position), "found you outside");
+
+        var inside = (entrance + PolicePursuit.Gameplay.PoliceChase.Centre(PolicePursuit.Gameplay.OpenWorld.TunnelTo)) / 2;
+        world.Car.Place(inside + Vector3.up * 0.6f, 0);
+        yield return null;
+        yield return null;
+        var lastSeen = heli.Watching;
+        yield return new WaitForSeconds(1.5f);
+        Assert.IsFalse(heli.CanSee);
+        Assert.IsFalse(heli.InBeam(world.Player.position), "no searchlight in the tunnel");
+        Assert.Less(Vector3.Distance(heli.Watching, lastSeen), 0.01f, "the beam waits where it last saw you");
+
+        world.Car.Place(PolicePursuit.Gameplay.PoliceChase.Centre(PolicePursuit.Gameplay.OpenWorld.TunnelTo) + Vector3.up * 0.6f, 0);
+        yield return null;
+        Assert.IsTrue(heli.CanSee, "out the other end: seen again");
+        world.Police.enabled = true;
+    }
+
 }
