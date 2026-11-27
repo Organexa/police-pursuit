@@ -17,6 +17,11 @@ namespace PolicePursuit.Gameplay
         public const float SniffFor = 6, SwimScale = 0.5f;
         public bool Swimming => OpenWorld.InWater(transform.position);
         public float CurrentSpeed => Swimming ? Speed * SwimScale : Speed;
+        // Out of the water it stops for a second to shake itself dry: a moment's head start.
+        public const float ShakeFor = 1;
+        public bool Shaking => shakeLeft > 0;
+        float shakeLeft;
+        bool wasSwimming;
         // Barks while it can see the player close by: the police cannot be lost while it does.
         public const float BarkRange = 30, BarkEvery = 1.5f;
         public bool Barking { get; private set; }
@@ -58,7 +63,8 @@ namespace PolicePursuit.Gameplay
             target = player;
             targetMelee = playerMelee;
             routing = false;
-            held = fall = sniffed = 0;
+            held = fall = sniffed = shakeLeft = 0;
+            wasSwimming = false;
             LostScent = false;
             LastScent = player.position;
             gameObject.SetActive(true);
@@ -76,6 +82,9 @@ namespace PolicePursuit.Gameplay
         {
             if (target == null) return;
             float dt = Time.deltaTime;
+            if (wasSwimming && !Swimming) shakeLeft = ShakeFor;
+            wasSwimming = Swimming;
+            if (Shaking) { Shake(dt); return; }
             if (LostScent) { Barking = false; Sniff(dt); return; }
             var from = transform.position + Vector3.up * 0.6f;
             var to = target.position + Vector3.up * 0.6f;
@@ -140,6 +149,16 @@ namespace PolicePursuit.Gameplay
         }
 
         static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+
+        void Shake(float dt)
+        {
+            shakeLeft -= dt;
+            held = 0;
+            var figure = transform.GetChild(0);
+            figure.localRotation = Shaking ? Quaternion.Euler(0, 0, Mathf.Sin(shakeLeft * 60) * 20) : Quaternion.identity;
+            fall = body.isGrounded ? -1 : fall - 20 * dt;
+            body.Move(Vector3.up * fall * dt);
+        }
 
         // Trots to the last place it had the scent and noses about there.
         void Sniff(float dt)

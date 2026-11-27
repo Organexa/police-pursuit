@@ -1409,4 +1409,39 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator PoliceDogShakesOffAfterSwimming()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var pond = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        float half = PolicePursuit.Gameplay.OpenWorld.PondHalf;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        police.Place(pond + new Vector3(half + 3, 0.6f, -25), 0);
+        world.Walker.Place(pond + new Vector3(-half - 4, 0, 0), 0); // on the dry grass west of the pond
+        yield return null;
+        dog.Release(pond + new Vector3(-half + 1.5f, 0.1f, 0), world.Walker.transform, world.Melee); // swimming, 1.5 m from the bank
+        yield return null;
+        Assert.IsTrue(dog.Swimming);
+
+        for (float t = 0; t < 3 && !dog.Shaking; t += Time.deltaTime) yield return null;
+        Assert.IsTrue(dog.Shaking, "out of the water: a shake");
+        Assert.IsFalse(dog.Swimming);
+        var at = dog.transform.position;
+        yield return new WaitForSeconds(PolicePursuit.Gameplay.PoliceDog.ShakeFor * 0.6f);
+        Assert.Less(Vector3.Distance(at, dog.transform.position), 0.2f, "stands still while it shakes");
+        Assert.AreEqual(0, dog.HoldProgress);
+        yield return new WaitForSeconds(PolicePursuit.Gameplay.PoliceDog.ShakeFor * 0.6f);
+        Assert.IsFalse(dog.Shaking, "then back on your trail");
+        world.Police.enabled = true;
+    }
+
 }
