@@ -291,6 +291,7 @@ namespace PolicePursuit.Gameplay
             Car.Flash(SirenOn);
             Traffic.PlayerSiren = SirenOn ? Car : null;
             People.PlayerSiren = SirenOn;
+            Fleer.Scared = SirenOn && Vector3.Distance(Car.transform.position, Fleer.transform.position) < FleeDriver.SpookRange;
             if (Mission != null && Mission.Result != Mission.Outcome.None) return;
             bool held = Police.gameObject.activeSelf && PoliceDistance < BustRange && PlayerSpeed < BustSpeed;
             bustTime = held ? bustTime + Time.deltaTime : 0;

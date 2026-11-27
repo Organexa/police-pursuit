@@ -857,4 +857,35 @@ public class FlowTests
         Assert.IsFalse(waiting.HoldForSiren, "siren off: free to cross on the next red");
     }
 
+    [UnityTest]
+    public IEnumerator SirenSpooksTheEscapee()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.StartMission(PolicePursuit.Gameplay.Mission.Role.Police);
+        var world = game.World;
+        var flee = world.Fleer.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        float top = PolicePursuit.Gameplay.VehicleController.TopSpeed;
+        yield return null;
+        Assert.AreEqual(top * PolicePursuit.Gameplay.FleeDriver.Calm, flee.SpeedLimit, 0.01f);
+
+        world.ToggleSiren(); // the escapee starts 30 m ahead: in earshot
+        yield return null;
+        yield return null;
+        Assert.IsTrue(world.Fleer.Scared);
+        Assert.AreEqual(top * PolicePursuit.Gameplay.FleeDriver.Spooked, flee.SpeedLimit, 0.01f, "drives harder");
+        Assert.Less(flee.SpeedLimit, world.Car.SpeedLimit, "still slower than you");
+
+        world.Car.Place(PolicePursuit.Gameplay.OpenWorld.PoliceSpawn, 0); // the far corner, well over 40 m away
+        yield return null;
+        yield return null;
+        Assert.IsFalse(world.Fleer.Scared, "out of earshot");
+        world.Car.Place(PolicePursuit.Gameplay.OpenWorld.Spawn, 0);
+        yield return null;
+        world.ToggleSiren();
+        yield return null;
+        yield return null;
+        Assert.AreEqual(top * PolicePursuit.Gameplay.FleeDriver.Calm, flee.SpeedLimit, 0.01f, "siren off: calms down");
+    }
+
 }

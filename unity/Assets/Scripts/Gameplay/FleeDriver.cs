@@ -6,6 +6,9 @@ namespace PolicePursuit.Gameplay
     public class FleeDriver : MonoBehaviour
     {
         public Transform From { get; set; } // the pursuer
+        public const float Calm = 0.8f, Spooked = 0.9f, SpookRange = 40; // share of top speed; metres
+        // A siren close behind makes the escapee push harder, still never as fast as the player's car.
+        public bool Scared { get; set; }
         VehicleController car;
         Vector2Int next, prev;
         float stuckTime, reverseLeft;
@@ -13,7 +16,7 @@ namespace PolicePursuit.Gameplay
         void Awake()
         {
             car = GetComponent<VehicleController>();
-            car.SpeedLimit = VehicleController.TopSpeed * 0.8f; // slower than the player, so it can be caught
+            car.SpeedLimit = VehicleController.TopSpeed * Calm; // slower than the player, so it can be caught
         }
 
         public void StartAt(Vector2Int from, Vector2Int towards)
@@ -39,6 +42,7 @@ namespace PolicePursuit.Gameplay
 
         void Update()
         {
+            car.SpeedLimit = VehicleController.TopSpeed * (Scared ? Spooked : Calm);
             if (From == null) return;
             var centre = PoliceChase.Centre(next);
             if (Vector2.Distance(new Vector2(centre.x, centre.z), new Vector2(transform.position.x, transform.position.z)) < 9)
