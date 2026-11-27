@@ -1340,6 +1340,7 @@ public class FlowTests
         Assert.AreEqual(0, dog.HoldProgress, "cannot reach you");
         world.Police.enabled = true;
     }
+
     [UnityTest]
     public IEnumerator PoliceDogFindsItsWayRoundTheFence()
     {
@@ -1444,4 +1445,52 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator PoliceDogLeavesWetPawPrints()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var pond = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        float half = PolicePursuit.Gameplay.OpenWorld.PondHalf;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        police.Place(pond + new Vector3(half + 3, 0.6f, 10), 0); // north-east of the pond, clear of the road you run along
+        world.Walker.Place(pond + new Vector3(-half - 5, 0, 0), 0); // dry grass west of the pond
+        yield return null;
+        dog.Release(pond + new Vector3(-half + 1.5f, 0.1f, 0), world.Walker.transform, world.Melee);
+        Assert.AreEqual(0, dog.PrintsShowing, "dry dog: no prints");
+
+        for (float t = 0; t < 4 && dog.PrintsShowing == 0; t += Time.deltaTime) yield return null;
+        Assert.IsTrue(dog.Wet);
+        Assert.Greater(dog.PrintsShowing, 0, "out of the water and running: wet prints");
+        Assert.LessOrEqual(dog.PrintsShowing, PolicePursuit.Gameplay.PoliceDog.PrintPool);
+
+        // Just over the north fence: the dog has a long run round, so it is still out and about when the prints fade.
+        // You sprint off west along the road south of the park, away from the pond: the dog follows on dry ground
+        // and never quite catches you (7 m/s against its 6.5), so it is still out when the prints fade.
+        world.Walker.Place(pond + new Vector3(-15, 0, -((PolicePursuit.Gameplay.OpenWorld.Pitch - PolicePursuit.Gameplay.OpenWorld.Road) / 2 + 3)), 0);
+        world.LookYaw = 0;
+        int busts = world.Busts;
+        Time.timeScale = 4;
+        float until = PolicePursuit.Gameplay.PoliceDog.WetFor + PolicePursuit.Gameplay.PoliceDog.PrintLife + 0.5f;
+        for (float t = 0; t < until; t += Time.deltaTime)
+        {
+            world.Walker.Move = Vector2.left;
+            world.Walker.Sprint = true;
+            yield return null;
+        }
+        Time.timeScale = 1;
+        Assert.AreEqual(busts, world.Busts, "not caught yet, so the dog is still out");
+        Assert.IsTrue(dog.gameObject.activeSelf);
+        Assert.IsFalse(dog.Wet, "dries off");
+        Assert.AreEqual(0, dog.PrintsShowing, "and the prints fade by themselves");
+        world.Police.enabled = true;
+    }
 }

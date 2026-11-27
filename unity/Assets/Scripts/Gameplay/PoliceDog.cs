@@ -22,6 +22,16 @@ namespace PolicePursuit.Gameplay
         public bool Shaking => shakeLeft > 0;
         float shakeLeft;
         bool wasSwimming;
+        // Wet paw prints for a while after a swim (a fixed pool, no allocation during play).
+        public const float WetFor = 6, PrintEvery = 0.6f, PrintLife = 3;
+        public const int PrintPool = 20;
+        public bool Wet => wetLeft > 0;
+        public int PrintsShowing { get { int n = 0; foreach (var p in prints) if (p != null && p.activeSelf) n++; return n; } }
+        readonly GameObject[] prints = new GameObject[PrintPool];
+        readonly float[] printedAt = new float[PrintPool];
+        int nextPrint;
+        float wetLeft;
+        Vector3 lastPrint;
         // Barks while it can see the player close by: the police cannot be lost while it does.
         public const float BarkRange = 30, BarkEvery = 1.5f;
         public bool Barking { get; private set; }
@@ -63,7 +73,7 @@ namespace PolicePursuit.Gameplay
             target = player;
             targetMelee = playerMelee;
             routing = false;
-            held = fall = sniffed = shakeLeft = 0;
+            held = fall = sniffed = shakeLeft = wetLeft = 0;
             wasSwimming = false;
             LostScent = false;
             LastScent = player.position;
@@ -75,6 +85,8 @@ namespace PolicePursuit.Gameplay
             gameObject.SetActive(false);
             held = sniffed = 0;
             LostScent = false; // a stale "gave up" would keep every later dog in the car
+            wetLeft = 0;
+            foreach (var p in prints) if (p != null) p.SetActive(false); // only the dog ages them
             Barking = false;
         }
 
@@ -82,7 +94,9 @@ namespace PolicePursuit.Gameplay
         {
             if (target == null) return;
             float dt = Time.deltaTime;
-            if (wasSwimming && !Swimming) shakeLeft = ShakeFor;
+            AgePrints();
+            if (wasSwimming && !Swimming) { shakeLeft = ShakeFor; wetLeft = WetFor; lastPrint = transform.position; }
+            if (Wet && !Swimming) LeavePrint(dt);
             wasSwimming = Swimming;
             if (Shaking) { Shake(dt); return; }
             if (LostScent) { Barking = false; Sniff(dt); return; }
@@ -149,6 +163,30 @@ namespace PolicePursuit.Gameplay
         }
 
         static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+
+        void LeavePrint(float dt)
+        {
+            wetLeft -= dt;
+            if (Flat(transform.position - lastPrint) < PrintEvery) return;
+            lastPrint = transform.position;
+            if (prints[nextPrint] == null)
+            {
+                prints[nextPrint] = Shapes.Box(transform.parent, Vector3.zero, new Vector3(0.14f, 0.01f, 0.18f), Shapes.Hex(0x14161C));
+                prints[nextPrint].name = "Paw print";
+            }
+            var p = prints[nextPrint];
+            p.transform.position = new Vector3(transform.position.x, 0.07f, transform.position.z) + transform.right * (nextPrint % 2 == 0 ? 0.12f : -0.12f);
+            p.transform.rotation = transform.rotation;
+            p.SetActive(true);
+            printedAt[nextPrint] = Time.time;
+            nextPrint = (nextPrint + 1) % PrintPool;
+        }
+
+        void AgePrints()
+        {
+            for (int i = 0; i < PrintPool; i++)
+                if (prints[i] != null && prints[i].activeSelf && Time.time - printedAt[i] > PrintLife) prints[i].SetActive(false);
+        }
 
         void Shake(float dt)
         {

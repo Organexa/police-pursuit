@@ -82,7 +82,8 @@ _Last updated: 2026-11-27_
 - OW22 wanted level and helicopter (`Helicopter.cs`): EditMode 35/35, PlayMode 33/33 on the scratch copy. No helicopter sound.
 - OW23 searchlight aims ahead: EditMode 36/36, PlayMode 34/34 on the scratch copy.
 - OW24 tunnel: EditMode 37/37, PlayMode 35/35 on the scratch copy.
-- OW25-OW28 police dogs, pond, bark, fences: tested together, EditMode 39/39, PlayMode 39/39 on the scratch copy, after two fixes found by the fence test (its police car was outside the dog's release range; a dog that had given up kept every later dog in the car). Four commits; the first three were not tested on their own. None of OW2–OW5 checked by hand or on a phone; no sounds or animations for walking or fighting; placeholder capsules. sits in the repo root (`api/`, `src/`, `bin/`, `go.env`, `PATENTS`, …); not part of this project, do not commit it.
+- OW25-OW28 police dogs, pond, bark, fences: tested together, EditMode 39/39, PlayMode 39/39 on the scratch copy, after two fixes found by the fence test (its police car was outside the dog's release range; a dog that had given up kept every later dog in the car). Four commits; the first three were not tested on their own.
+- OW29-OW32 dog routing, swimming, shake, paw prints: tested together, EditMode 39/39, PlayMode 43/43 on the scratch copy, after fixing a dog that never gave up when a fence stood between it and the lost scent, and the paw-print test (the dog swam again on its way to you, then a parked police car blocked your run). Four commits; the first three were not tested on their own. None of OW2–OW5 checked by hand or on a phone; no sounds or animations for walking or fighting; placeholder capsules. sits in the repo root (`api/`, `src/`, `bin/`, `go.env`, `PATENTS`, …); not part of this project, do not commit it.
 
 ## Decisions so far
 | Topic | Decision |

@@ -230,4 +230,8 @@ _Added 2026-11-27 at your request: a second mode next to the endless run, which 
 - OW26 ◐ Park pond (the block south-east of the centre): wading is half speed; in the water a dog loses your scent, waits 6 s where it last had it and gives up; no new dog for 30 s.
 - OW27 ◐ Dogs bark every 1.5 s while they can see you within 30 m; you cannot lose the police while one barks.
 - OW28 ◐ Park fences (north and west sides, 0.7 m): you can jump them, a dog cannot.
+- OW29 ◐ Dogs go round obstacles: to the corner of whatever is in the way that gives the shortest clear trip (a fence's open end, a building's corner); also while hunting a lost scent.
+- OW30 ◐ Dogs swim after you at half speed while they can see you; the scent is lost only when you are in the water and out of sight.
+- OW31 ◐ Out of the water a dog stops 1 s to shake itself dry.
+- OW32 ◐ Wet paw prints for 6 s after a swim (one every 0.6 m, each fading after 3 s; a pool of 20).
 - **Open questions:** character art and animations (you choose and buy a pack; placeholders until then); open-world scores do not go to the leaderboard until the server has a rule for them.
