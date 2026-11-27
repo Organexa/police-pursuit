@@ -12,6 +12,15 @@ namespace PolicePursuit.Gameplay
         public const float Range = 15;
         static readonly Color Water = Shapes.Hex(0x1A2230);
         public readonly List<VehicleController> Lights = new List<VehicleController>(); // anything with a light bar
+        // Driving through one faster than this throws up spray; the player's car also makes a sound.
+        public const float SplashSpeed = 5, SplashGap = 0.5f;
+        public readonly List<VehicleController> Drivers = new List<VehicleController>();
+        public CivilTraffic Traffic { get; set; }
+        public VehicleController PlayerCar { get; set; }
+        public event System.Action PlayerSplashed;
+        public int Splashes { get; private set; }
+        ParticleSystem spray;
+        readonly List<float> splashedAt = new List<float>();
         readonly List<Renderer> puddles = new List<Renderer>();
         readonly List<float> strength = new List<float>();
         float nextPaint;
@@ -37,7 +46,34 @@ namespace PolicePursuit.Gameplay
                 p.gameObject.SetActive(false);
                 puddles.Add(p);
                 strength.Add(0);
+                splashedAt.Add(-99);
             }
+            BuildSpray();
+        }
+
+        void BuildSpray()
+        {
+            var go = new GameObject("Spray");
+            go.transform.SetParent(transform, false);
+            spray = go.AddComponent<ParticleSystem>();
+            spray.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = spray.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.startLifetime = 0.6f;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(2, 5);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.12f);
+            main.maxParticles = 300;
+            main.gravityModifier = 1.5f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var emission = spray.emission;
+            emission.enabled = false; // bursts only, by Emit
+            var shape = spray.shape;
+            shape.shapeType = ParticleSystemShapeType.Hemisphere;
+            shape.radius = 0.6f;
+            var r = go.GetComponent<ParticleSystemRenderer>();
+            r.material = new Material(Resources.Load<Shader>("Flat")); // always in the build
+            r.material.SetColor("_Color", new Color(0.55f, 0.65f, 0.8f));
         }
 
         public void Show(bool raining)
@@ -45,10 +81,36 @@ namespace PolicePursuit.Gameplay
             foreach (var p in puddles) if (p.gameObject.activeSelf != raining) p.gameObject.SetActive(raining);
         }
 
+        bool InPuddle(int i, Vector3 at)
+        {
+            var b = puddles[i].bounds;
+            return at.x > b.min.x && at.x < b.max.x && at.z > b.min.z && at.z < b.max.z;
+        }
+
+        void CheckSplash(Vector3 at, float speed, bool player)
+        {
+            if (speed < SplashSpeed) return;
+            for (int i = 0; i < puddles.Count; i++)
+            {
+                if (Time.time - splashedAt[i] < SplashGap || !InPuddle(i, at)) continue;
+                splashedAt[i] = Time.time;
+                Splashes++;
+                spray.transform.position = new Vector3(at.x, 0.1f, at.z);
+                spray.Emit(Mathf.Clamp((int)(speed * 2), 10, 60));
+                if (player) PlayerSplashed?.Invoke();
+            }
+        }
+
         // Ten times a second is enough to follow a 0.2 s flash.
         void Update()
         {
-            if (Time.time < nextPaint || puddles.Count == 0 || !puddles[0].gameObject.activeSelf) return;
+            if (puddles.Count == 0 || !puddles[0].gameObject.activeSelf) return;
+            foreach (var d in Drivers)
+                if (d != null && d.gameObject.activeInHierarchy) CheckSplash(d.transform.position, Mathf.Abs(d.Speed), d == PlayerCar);
+            if (Traffic != null)
+                foreach (var c in Traffic.Cars)
+                    if (c.gameObject.activeSelf) CheckSplash(c.transform.position, c.Crashed ? c.Body.linearVelocity.magnitude : c.Speed, false);
+            if (Time.time < nextPaint) return;
             nextPaint = Time.time + 0.1f;
             for (int i = 0; i < puddles.Count; i++)
             {

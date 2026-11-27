@@ -1611,4 +1611,44 @@ public class FlowTests
         Assert.AreEqual(0, puddles.Showing, "they dry up with the rain");
     }
 
+    [UnityTest]
+    public IEnumerator DrivingThroughAPuddleSplashes()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var puddles = world.Puddles;
+        world.Police.Target = null;
+        world.Sky.Forced = true;
+        int mine = 0;
+        System.Action count = () => mine++;
+        puddles.PlayerSplashed += count;
+        yield return null;
+
+        // Slowly through one puddle: no spray.
+        int before = puddles.Splashes;
+        var slow = puddles.Position(1);
+        for (float t = 0; t < 0.5f; t += Time.deltaTime)
+        {
+            world.Car.Place(slow + Vector3.up * 0.6f, 0);
+            world.Car.Body.linearVelocity = Vector3.forward * 2;
+            yield return null;
+        }
+        Assert.AreEqual(0, mine, "a crawl through a puddle makes no splash");
+
+        // Fast through another: spray and a splash sound.
+        var fast = puddles.Position(0);
+        // Held over it for just under the 0.5 s gap: exactly one splash, not one per frame.
+        for (float t = 0; t < 0.4f; t += Time.deltaTime)
+        {
+            world.Car.Place(fast + Vector3.up * 0.6f, 0);
+            world.Car.Body.linearVelocity = Vector3.forward * 12;
+            yield return null;
+        }
+        puddles.PlayerSplashed -= count;
+        Assert.AreEqual(1, mine, "one splash per pass, not one per frame");
+        Assert.Greater(puddles.Splashes, before);
+    }
 }

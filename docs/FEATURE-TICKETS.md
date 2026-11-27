@@ -234,4 +234,8 @@ _Added 2026-11-27 at your request: a second mode next to the endless run, which 
 - OW30 ◐ Dogs swim after you at half speed while they can see you; the scent is lost only when you are in the water and out of sight.
 - OW31 ◐ Out of the water a dog stops 1 s to shake itself dry.
 - OW32 ◐ Wet paw prints for 6 s after a swim (one every 0.6 m, each fading after 3 s; a pool of 20).
+- OW33 ◐ Your wet footprints for 6 s after wading; a dog that lost sight or scent follows the newest it can see within 20 m.
+- OW34 ◐ Passing showers (3 min dry, 90 s rain): rain particles, thicker fog; rain washes all wet prints away.
+- OW35 ◐ Rain puddles (24) glow with nearby flashing police lights (tint, not a real reflection).
+- OW36 ◐ Driving through a puddle over 5 m/s splashes (spray; a sound for your car only).
 - **Open questions:** character art and animations (you choose and buy a pack; placeholders until then); open-world scores do not go to the leaderboard until the server has a rule for them.

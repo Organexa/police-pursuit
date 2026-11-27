@@ -198,6 +198,11 @@ namespace PolicePursuit.Gameplay
             Puddles.Lights.Add(Police.GetComponent<VehicleController>());
             Puddles.Lights.AddRange(Block.Cars);
             Puddles.Lights.Add(Car);
+            Puddles.Drivers.AddRange(Puddles.Lights); // the same cars, plus civilian traffic
+            Puddles.Drivers.Add(Fleer.GetComponent<VehicleController>());
+            Puddles.Traffic = Traffic;
+            Puddles.PlayerCar = Car;
+            Puddles.PlayerSplashed += () => Core.GameManager.Instance?.Sound?.Splash();
             Begin(null);
         }
 
