@@ -1267,4 +1267,36 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator PoliceDogBarksWhenItSeesYou()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        int barks = 0;
+        System.Action count = () => barks++;
+        dog.Barked += count;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        var shore = PolicePursuit.Gameplay.OpenWorld.ParkCentre + new Vector3(PolicePursuit.Gameplay.OpenWorld.PondHalf + 3, 0, 0);
+        world.Walker.Place(shore, 0);
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        police.Place(shore - Vector3.forward * 20 + Vector3.up * 0.6f, 0);
+        for (float t = 0; t < 1.5f; t += Time.deltaTime) yield return null; // running in, not yet at you
+        Assert.IsTrue(dog.Barking, "barks at you in plain sight");
+        Assert.GreaterOrEqual(barks, 1);
+
+        world.Walker.Place(PolicePursuit.Gameplay.OpenWorld.ParkCentre, 0); // into the pond
+        yield return null;
+        yield return null;
+        Assert.IsFalse(dog.Barking, "scent lost: it goes quiet");
+        dog.Barked -= count;
+        world.Police.enabled = true;
+    }
+
 }

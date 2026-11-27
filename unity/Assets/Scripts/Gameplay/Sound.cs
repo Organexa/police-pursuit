@@ -16,7 +16,7 @@ namespace PolicePursuit.Gameplay
 
         GameManager game;
         AudioSource engine, siren, effects, ui;
-        AudioClip crash, coin, whoosh, click, horn;
+        AudioClip crash, coin, whoosh, click, horn, bark;
         readonly AudioSource[] music = new AudioSource[3];
 
         // Layer 0 (bass and kick) always plays; drums join at two stars and the lead at three, only while driving.
@@ -55,6 +55,14 @@ namespace PolicePursuit.Gameplay
             whoosh = Clip("whoosh", 0.3f, Whoosh());
             click = Clip("click", 0.04f, t => Tone(660, t) * (1 - t / 0.04f));
             // Two-note car horn, faded in and out so it does not click.
+            // Two short gruff yaps: a falling tone roughened with noise.
+            var yap = new Random(3);
+            bark = Clip("bark", 0.32f, t =>
+            {
+                float local = t % 0.16f;
+                float pitch = Mathf.Lerp(520, 260, local / 0.16f);
+                return (Tone(pitch, local) * 0.6f + (float)(yap.NextDouble() * 2 - 1) * 0.4f) * Mathf.Exp(-14 * local);
+            });
             horn = Clip("horn", 0.45f, t => (Tone(415, t) + Tone(523, t)) * 0.35f * Mathf.Min(1, t * 40, (0.45f - t) * 20));
         }
 
@@ -63,6 +71,7 @@ namespace PolicePursuit.Gameplay
         public void NearMiss() => effects.PlayOneShot(whoosh, 0.6f);
         public void Click() => ui.PlayOneShot(click, 0.5f);
         public void Horn() => effects.PlayOneShot(horn, 0.7f);
+        public void Bark() => effects.PlayOneShot(bark, 0.6f);
 
         void Update()
         {

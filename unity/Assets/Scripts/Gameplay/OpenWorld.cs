@@ -160,6 +160,7 @@ namespace PolicePursuit.Gameplay
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
             Heli = Helicopter.Create(transform);
             Dog = PoliceDog.Create(transform);
+            Dog.Barked += () => Core.GameManager.Instance?.Sound?.Bark();
             var tunnelMid = (PoliceChase.Centre(TunnelFrom) + PoliceChase.Centre(TunnelTo)) / 2;
             Solid(tunnelMid + Vector3.up * TunnelRoof, new Vector3(Road + 1, 1, Pitch - Road), Shapes.Hex(0x2A2E38)).name = "Tunnel roof";
             Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
@@ -329,11 +330,15 @@ namespace PolicePursuit.Gameplay
             return true;
         }
 
+        // Out of every way the police have of knowing where you are.
+        public static bool Hidden(float policeDistance, bool policeSee, bool inSearchlight, bool dogBarking) =>
+            policeDistance > LoseRange && !policeSee && !inSearchlight && !dogBarking;
+
         void TickWanted(float dt)
         {
             if (!Chased) { ChaseTime = loseTime = 0; Heli.Leave(); return; }
             ChaseTime += dt;
-            bool hidden = PoliceDistance > LoseRange && !Police.InSight && !Heli.InBeam(Player.position);
+            bool hidden = Hidden(PoliceDistance, Police.InSight, Heli.InBeam(Player.position), Dog.Barking);
             loseTime = hidden ? loseTime + dt : 0;
             if (loseTime > LoseAfter) { ChaseTime = loseTime = 0; } // lost them, for now
             if (Wanted >= Helicopter.FromWanted)

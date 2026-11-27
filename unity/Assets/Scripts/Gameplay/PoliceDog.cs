@@ -14,6 +14,11 @@ namespace PolicePursuit.Gameplay
         public float HoldProgress => held / HoldFor;
         public bool Holding => held >= HoldFor;
         public const float SniffFor = 6;
+        // Barks while it can see the player close by: the police cannot be lost while it does.
+        public const float BarkRange = 30, BarkEvery = 1.5f;
+        public bool Barking { get; private set; }
+        public event System.Action Barked;
+        float nextBark;
         public bool LostScent { get; private set; }
         public bool GaveUp => LostScent && sniffed > SniffFor;
         public Vector3 LastScent { get; private set; }
@@ -59,6 +64,7 @@ namespace PolicePursuit.Gameplay
             gameObject.SetActive(false);
             held = sniffed = 0;
             LostScent = false; // a stale "gave up" would keep every later dog in the car
+            Barking = false;
         }
 
         void Update()
@@ -66,7 +72,7 @@ namespace PolicePursuit.Gameplay
             if (target == null) return;
             float dt = Time.deltaTime;
             if (!LostScent && OpenWorld.InWater(target.position)) LostScent = true;
-            if (LostScent) { Sniff(dt); return; }
+            if (LostScent) { Barking = false; Sniff(dt); return; }
             LastScent = target.position;
             var from = transform.position + Vector3.up * 0.6f;
             var to = target.position + Vector3.up * 0.6f;
@@ -85,6 +91,12 @@ namespace PolicePursuit.Gameplay
             var flat = goal - transform.position;
             flat.y = 0;
             float distance = Vector3.Distance(transform.position, target.position);
+            Barking = inSight && distance < BarkRange;
+            if (Barking && Time.time >= nextBark)
+            {
+                nextBark = Time.time + BarkEvery;
+                Barked?.Invoke();
+            }
             var move = distance > HoldRange * 0.8f ? flat.normalized * Speed : Vector3.zero;
             if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat);
             fall = body.isGrounded ? -1 : fall - 20 * dt;

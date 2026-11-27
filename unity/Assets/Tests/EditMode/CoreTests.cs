@@ -530,4 +530,14 @@ public class CoreTests
         Assert.Less(OpenWorld.PondHalf, block, "inside the block, off the roads");
     }
 
+    [Test]
+    public void YouCannotLoseThePoliceWhileTheDogBarks()
+    {
+        float far = OpenWorld.LoseRange + 1;
+        Assert.IsTrue(OpenWorld.Hidden(far, false, false, false));
+        Assert.IsFalse(OpenWorld.Hidden(far, false, false, true), "a barking dog gives you away");
+        Assert.IsFalse(OpenWorld.Hidden(far, true, false, false), "seen by a police car");
+        Assert.IsFalse(OpenWorld.Hidden(far, false, true, false), "in the searchlight");
+        Assert.IsFalse(OpenWorld.Hidden(OpenWorld.LoseRange - 1, false, false, false), "too close");
+    }
 }
