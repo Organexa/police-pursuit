@@ -430,4 +430,27 @@ public class CoreTests
         Assert.That(Pedestrian.WalkHalf, Is.InRange(buildingHalf + 0.4f, buildingHalf + Pedestrian.Pavement - 0.4f));
         Assert.Greater(OpenWorld.Pitch / 2 - Pedestrian.WalkHalf - 0.3f, CivilCar.Lane + 0.9f, "a car in its lane never reaches the pavement");
     }
+
+    [Test]
+    public void TrafficLightsAlternateAndAmberLetsCloseCarsThrough()
+    {
+        var node = new Vector2Int(0, 0); // offset 0
+        var north = new Vector2Int(0, 1); // arriving along the north-south road
+        var east = new Vector2Int(1, 0);  // arriving along the east-west road
+        Assert.AreEqual(0, TrafficLights.Offset(node));
+        Assert.AreEqual(TrafficLights.Light.Green, TrafficLights.For(node, north, 1));
+        Assert.AreEqual(TrafficLights.Light.Red, TrafficLights.For(node, east, 1), "never green both ways");
+        Assert.AreEqual(TrafficLights.Light.Amber, TrafficLights.For(node, north, 9));
+        Assert.AreEqual(TrafficLights.Light.Red, TrafficLights.For(node, north, 11));
+        Assert.AreEqual(TrafficLights.Light.Green, TrafficLights.For(node, east, 11));
+        Assert.AreEqual(TrafficLights.Light.Green, TrafficLights.For(node, north, 21), "repeats every cycle");
+        for (float t = 0; t < TrafficLights.Cycle; t += 0.5f)
+            Assert.IsFalse(TrafficLights.For(node, north, t) == TrafficLights.Light.Green && TrafficLights.For(node, east, t) == TrafficLights.Light.Green);
+        Assert.AreNotEqual(TrafficLights.Offset(new Vector2Int(1, 0)), TrafficLights.Offset(new Vector2Int(2, 0)), "neighbours out of step");
+
+        Assert.IsTrue(TrafficLights.MustStop(TrafficLights.Light.Red, 1));
+        Assert.IsTrue(TrafficLights.MustStop(TrafficLights.Light.Amber, 20));
+        Assert.IsFalse(TrafficLights.MustStop(TrafficLights.Light.Amber, 2), "too close to stop: carry on");
+        Assert.IsFalse(TrafficLights.MustStop(TrafficLights.Light.Green, 1));
+    }
 }

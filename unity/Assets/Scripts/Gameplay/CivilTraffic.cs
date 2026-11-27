@@ -5,7 +5,8 @@ namespace PolicePursuit.Gameplay
 {
     // Civilian cars for the open world: they keep to the right-hand lane, turn at random at each crossroads
     // (never straight back), stop for anything in front of them, and are knocked loose when hit hard.
-    // shortcut: no traffic lights or give-way rules at crossroads yet.
+    // They stop at the line for red (and for amber when there is room), then go on green.
+    // shortcut: no give-way rules inside a crossroads; turning cars just cut across.
     public class CivilCar : MonoBehaviour
     {
         public const float Lane = 3.5f, NodeClear = 8, Cruise = 9, Brake = 15, Accel = 4, LookAhead = 10, CrashSpeed = 5;
@@ -75,6 +76,8 @@ namespace PolicePursuit.Gameplay
         }
 
         public Vector2Int Heading => to;
+        public Vector2Int Coming => from;
+        public bool WaitingAtLight { get; private set; }
 
         void FixedUpdate()
         {
@@ -84,6 +87,9 @@ namespace PolicePursuit.Gameplay
             var pos = Body.position;
             var flat = goal - pos;
             flat.y = 0;
+            bool stopForLight = toEnd && TrafficLights.MustStop(TrafficLights.For(to, from, Time.time), flat.magnitude);
+            WaitingAtLight = stopForLight && flat.magnitude < 3;
+            if (flat.magnitude < 1 && stopForLight) { Speed = 0; return; } // at the line: wait for green
             if (flat.magnitude < 1)
             {
                 if (toEnd)
@@ -99,11 +105,16 @@ namespace PolicePursuit.Gameplay
 
             // Stop for whatever is in front: other cars, the player on foot, police. Buildings never sit in a lane.
             var eye = pos + Vector3.up * 0.7f + transform.forward * 2.1f;
-            bool blocked = Physics.Raycast(eye, transform.forward, LookAhead);
-            blockedFor = blocked ? blockedFor + dt : 0;
+            bool blocked = Physics.Raycast(eye, transform.forward, out var ahead, LookAhead);
+            // Queuing behind a car at a red light is not a stand-off: never creep into it.
+            var front = blocked ? ahead.collider.GetComponentInParent<CivilCar>() : null;
+            bool queuing = front != null && Vector3.Dot(front.transform.forward, transform.forward) > 0.5f; // same way: a queue
+            blockedFor = blocked && !queuing ? blockedFor + dt : 0;
             if (blockedFor > 4) blocked = blockedFor < 4.5f; // re-checks every 4.5 s, creeping at walking pace in between
             float cap = blockedFor > 4 ? 1.5f : Cruise;
             Speed = blocked ? Mathf.Max(0, Speed - Brake * dt) : Mathf.Min(cap, Speed + Accel * dt);
+            // Fast enough to stop on the line, gently, no faster.
+            if (stopForLight) Speed = Mathf.Min(Speed, Mathf.Sqrt(2 * Brake * 0.5f * Mathf.Max(0, flat.magnitude - 0.8f)));
             if (blockedFor > 4.5f + 1.5f) blockedFor = 0;
 
             var dir = flat.normalized;

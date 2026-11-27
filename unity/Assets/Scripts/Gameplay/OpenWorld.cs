@@ -40,6 +40,7 @@ namespace PolicePursuit.Gameplay
         public FleeDriver Fleer { get; private set; }
         public CivilTraffic Traffic { get; private set; }
         public Pedestrians People { get; private set; }
+        public TrafficLights Lights { get; private set; }
         public bool CarLocked { get; private set; } // broken down: cannot be driven again this attempt
         GameObject garagePad, safehousePad;
         bool reported;
@@ -120,6 +121,9 @@ namespace PolicePursuit.Gameplay
             Traffic.Player = Car.transform;
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
+            Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
+            Lights.transform.SetParent(transform, false);
+            Lights.Build();
             People = new GameObject("Pedestrians").AddComponent<Pedestrians>();
             People.transform.SetParent(transform, false);
             People.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()));

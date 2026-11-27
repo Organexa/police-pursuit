@@ -641,4 +641,40 @@ public class FlowTests
         yield return new WaitForFixedUpdate();
         Assert.IsTrue(other.Diving, "dives clear of a car");
     }
+
+    [UnityTest]
+    public IEnumerator OpenWorldTrafficWaitsForGreen()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        Assert.AreEqual(80, world.Lights.LampCount, "one lamp per road into each crossroads");
+
+        Time.timeScale = 4;
+        PolicePursuit.Gameplay.CivilCar waiter = null;
+        for (float t = 0; t < 60 && waiter == null; t += Time.deltaTime)
+        {
+            foreach (var c in world.Traffic.Cars)
+                if (c.gameObject.activeSelf && !c.Crashed && c.WaitingAtLight && c.Speed == 0) { waiter = c; break; }
+            yield return null;
+        }
+        Assert.IsNotNull(waiter, "some car stopped at a light");
+        var light = PolicePursuit.Gameplay.TrafficLights.For(waiter.Heading, waiter.Coming, Time.time);
+        Assert.AreNotEqual(PolicePursuit.Gameplay.TrafficLights.Light.Green, light, "it stopped for amber or red");
+        float toCentre = Vector3.Distance(waiter.transform.position, PolicePursuit.Gameplay.PoliceChase.Centre(waiter.Heading));
+        Assert.Greater(toCentre, PolicePursuit.Gameplay.CivilCar.NodeClear - 1.5f, "it waits behind the line");
+
+        var heading = waiter.Heading;
+        bool moved = false;
+        for (float t = 0; t < PolicePursuit.Gameplay.TrafficLights.Cycle + 2 && !moved; t += Time.deltaTime)
+        {
+            moved = waiter.Speed > 2 || waiter.Heading != heading;
+            yield return null;
+        }
+        Time.timeScale = 1;
+        Assert.IsTrue(moved, "and goes on green");
+    }
 }
