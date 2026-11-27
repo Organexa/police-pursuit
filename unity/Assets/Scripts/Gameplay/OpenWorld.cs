@@ -42,6 +42,15 @@ namespace PolicePursuit.Gameplay
         public Pedestrians People { get; private set; }
         public TrafficLights Lights { get; private set; }
         public RoadBlock Block { get; private set; }
+
+        // Wanted level while the police are after you: 1 star, one more every 30 s (the endless run's rule), up to 5.
+        // Out of sight and over 80 m from every police car (and out of the searchlight) for 10 s: back to 1.
+        public const float LoseRange = 80, LoseAfter = 10;
+        public bool Chased => Police.gameObject.activeSelf && Police.Target != null;
+        public float ChaseTime { get; set; } // settable so tests (and later, missions) can start a chase hot
+        public int Wanted => Chased ? Core.WantedLevel.ForDuration(ChaseTime) : 0;
+        public Helicopter Heli { get; private set; }
+        float loseTime;
         public bool CarLocked { get; private set; } // broken down: cannot be driven again this attempt
         GameObject garagePad, safehousePad;
         bool reported;
@@ -123,6 +132,7 @@ namespace PolicePursuit.Gameplay
             Traffic.PoliceCar = Police.GetComponent<VehicleController>();
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
+            Heli = Helicopter.Create(transform);
             Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
             Block.transform.SetParent(transform, false);
             Block.Init();
@@ -265,8 +275,25 @@ namespace PolicePursuit.Gameplay
             Police.GetComponent<VehicleController>().Place(transform.TransformPoint(PoliceSpawn), 0);
             Police.ResetChase();
             Block.ResetBlock();
+            ChaseTime = loseTime = 0;
+            Heli.Leave();
             Traffic.ResetTraffic();
             bustTime = cuffTime = 0;
+        }
+
+        void TickWanted(float dt)
+        {
+            if (!Chased) { ChaseTime = loseTime = 0; Heli.Leave(); return; }
+            ChaseTime += dt;
+            bool hidden = PoliceDistance > LoseRange && !Police.InSight && !Heli.InBeam(Player.position);
+            loseTime = hidden ? loseTime + dt : 0;
+            if (loseTime > LoseAfter) { ChaseTime = loseTime = 0; } // lost them, for now
+            if (Wanted >= Helicopter.FromWanted)
+            {
+                if (!Heli.gameObject.activeSelf) Heli.Arrive(Player.position);
+                Heli.Tick(Player.position, dt);
+            }
+            else if (Heli.gameObject.activeSelf) Heli.Leave();
         }
 
         // Runs after the UI and tests have set ArrestHeld for this frame.
@@ -292,6 +319,7 @@ namespace PolicePursuit.Gameplay
         void Update()
         {
             Suspect.Target = OnFoot ? Walker.transform : null;
+            TickWanted(Time.deltaTime);
             // Roadblocks only while the police are actually after you in your car.
             Block.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             Fleer.From = Player;

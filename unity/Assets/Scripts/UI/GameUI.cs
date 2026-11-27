@@ -35,7 +35,7 @@ namespace PolicePursuit.UI
         GameObject driveControls, footControls;
         HoldButton sprint, jump, fire, block, arrest;
         Text sirenButton;
-        Text objectiveText, missionResultText;
+        Text objectiveText, missionResultText, wantedText;
         GameObject missionIntro, missionResult;
         Text ammoText;
         GameObject crosshair;
@@ -239,6 +239,9 @@ namespace PolicePursuit.UI
             objectiveText = Label(root, new Vector2(0.5f, 1), new Vector2(0, -56), new Vector2(420, 28), 18, TextAnchor.MiddleCenter);
             objectiveText.color = Gameplay.Shapes.Cyan;
             objectiveText.raycastTarget = false;
+            wantedText = Label(root, new Vector2(0.5f, 1), new Vector2(0, -84), new Vector2(420, 26), 18, TextAnchor.MiddleCenter);
+            wantedText.color = Gameplay.Shapes.Magenta;
+            wantedText.raycastTarget = false;
             MakeButton(root, "Menu", Vector2.one, new Vector2(-16, -16), new Vector2(96, 48), game.ToMenu);
             MakeButton(root, "Restart", Vector2.one, new Vector2(-120, -16), new Vector2(96, 48), () => game.World.Restart());
             doorText = MakeButton(root, "EXIT", bottomRight, new Vector2(-16, 270), new Vector2(110, 56), ToggleDoor);
@@ -337,6 +340,9 @@ namespace PolicePursuit.UI
                 speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h    Police {Mathf.RoundToInt(world.PoliceDistance)} m";
             }
             var m = world.Mission;
+            int wanted = world.Wanted;
+            wantedText.text = wanted == 0 ? "" : "WANTED " + new string('*', wanted) + new string('-', 5 - wanted)
+                + (world.Heli.Overhead ? (world.Heli.InBeam(world.Player.position) ? "   IN THE SEARCHLIGHT" : "   HELICOPTER") : "");
             objectiveText.text = m == null ? world.Objective
                 : $"{world.Objective}   {Mathf.CeilToInt(Mathf.Max(0, Gameplay.Mission.TimeLimit - m.Elapsed))} s";
             if (m != null && m.Elapsed < m.MessageUntil) { bustText.text = m.Message; return; }

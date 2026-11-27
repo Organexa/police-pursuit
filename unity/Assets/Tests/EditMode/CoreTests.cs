@@ -499,4 +499,5 @@ public class CoreTests
         Assert.AreEqual(new Vector2Int(2, 2), a);
         Assert.AreEqual(new Vector2Int(3, 2), b);
     }
+
 }

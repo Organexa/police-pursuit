@@ -27,6 +27,7 @@ public class FlowTests
         if (queue == null) File.Delete(ScoreQueue.DefaultPath);
         else File.WriteAllText(ScoreQueue.DefaultPath, queue);
         PolicePursuit.Gameplay.Pedestrian.CrossChance = 0.5f;
+        if (GameManager.Instance.World != null) GameManager.Instance.World.Police.enabled = true; // some tests park it
         GameManager.Instance.ToMenu();
     }
 
@@ -1051,6 +1052,71 @@ public class FlowTests
             yield return null;
         }
         Assert.IsTrue(civ.PullingOver, "makes way for a roadblock car on the move");
+    }
+
+    [UnityTest]
+    public IEnumerator HelicopterSearchlightAtWantedFour()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var heli = world.Heli;
+        yield return null;
+        Assert.AreEqual(1, world.Wanted, "a chase starts at one star");
+        Assert.IsFalse(heli.gameObject.activeSelf);
+
+        world.ChaseTime = 95; // 90 s in: four stars
+        yield return null;
+        Assert.AreEqual(4, world.Wanted);
+        Assert.IsTrue(heli.gameObject.activeSelf, "the helicopter joins");
+        Assert.IsFalse(heli.Overhead, "it has to fly in first");
+
+        Time.timeScale = 4;
+        for (float t = 0; t < 20 && !heli.Overhead; t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsTrue(heli.Overhead);
+        Assert.IsTrue(heli.Beam.enabled, "searchlight on");
+        Assert.IsTrue(heli.InBeam(world.Player.position), "it has found the parked car");
+        Assert.Greater(heli.transform.position.y, 25, "high up");
+
+        world.Car.Place(world.Car.transform.position + Vector3.forward * 60, 0); // a fast getaway
+        yield return null;
+        Assert.IsFalse(heli.InBeam(world.Player.position), "a fast car leaves the beam behind");
+        for (float t = 0; t < 6 && !heli.InBeam(world.Player.position); t += Time.deltaTime) yield return null;
+        Assert.IsTrue(heli.InBeam(world.Player.position), "and it catches up with a car that stops");
+
+        world.ChaseTime = 10;
+        yield return null;
+        Assert.AreEqual(1, world.Wanted);
+        Assert.IsFalse(heli.gameObject.activeSelf, "below four stars it goes");
+    }
+
+    [UnityTest]
+    public IEnumerator LosingThePoliceDropsTheWantedLevel()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        world.Car.Place(new Vector3(108, 0.6f, 108), 0); // the far corner from the police
+        world.ChaseTime = 70; // three stars
+        yield return new WaitForFixedUpdate();
+        yield return null; // the police check their sight line once: buildings in the way
+        Assert.IsFalse(world.Police.InSight);
+        world.Police.enabled = false; // and then sit still where they are
+        police.Pedal = police.Steer = 0;
+        police.Place(PolicePursuit.Gameplay.OpenWorld.PoliceSpawn, 0);
+        Assert.AreEqual(3, world.Wanted);
+
+        Time.timeScale = 4;
+        for (float t = 0; t < PolicePursuit.Gameplay.OpenWorld.LoseAfter + 2 && world.Wanted > 1; t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        world.Police.enabled = true;
+        Assert.AreEqual(1, world.Wanted, "out of sight and far away long enough: lost them");
     }
 
 }

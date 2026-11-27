@@ -78,7 +78,8 @@ _Last updated: 2026-11-27_
 - OW12–OW18 built 2026-11-27/28 (horn, pull-over, player siren, siren hold, escapee speed-up, AI swerve for crossings, civilian stop test): tested together, EditMode 34/34, PlayMode 28/28 on the scratch copy, after fixing a pull-over that barely moved sideways and a dive check that could pick someone mid-crossing. Committed as four commits; the first three were not tested on their own.
 - OW19 roadblock built 2026-11-28 (`RoadBlock.cs`): EditMode 35/35, PlayMode 29/29 on the scratch copy.
 - OW20 roadblock cars chase you once passed: EditMode 35/35, PlayMode 30/30 on the scratch copy.
-- OW21 traffic pulls over for roadblock cars: EditMode 35/35, PlayMode 31/31 on the scratch copy. None of OW2–OW5 checked by hand or on a phone; no sounds or animations for walking or fighting; placeholder capsules. sits in the repo root (`api/`, `src/`, `bin/`, `go.env`, `PATENTS`, …); not part of this project, do not commit it.
+- OW21 traffic pulls over for roadblock cars: EditMode 35/35, PlayMode 31/31 on the scratch copy.
+- OW22 wanted level and helicopter (`Helicopter.cs`): EditMode 35/35, PlayMode 33/33 on the scratch copy. No helicopter sound. None of OW2–OW5 checked by hand or on a phone; no sounds or animations for walking or fighting; placeholder capsules. sits in the repo root (`api/`, `src/`, `bin/`, `go.env`, `PATENTS`, …); not part of this project, do not commit it.
 
 ## Decisions so far
 | Topic | Decision |
