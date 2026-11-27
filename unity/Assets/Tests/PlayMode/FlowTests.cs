@@ -888,4 +888,35 @@ public class FlowTests
         Assert.AreEqual(top * PolicePursuit.Gameplay.FleeDriver.Calm, flee.SpeedLimit, 0.01f, "siren off: calms down");
     }
 
+    [UnityTest]
+    public IEnumerator AiCarsSwerveAndBrakeForPeopleOnACrossing()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var car = world.Car; // any car can be driven by the shared AI steering
+        car.Place(new Vector3(0, 0.6f, -30), 0);
+        yield return new WaitForFixedUpdate();
+        car.Body.linearVelocity = Vector3.forward * 10;
+        float stuck = 0, reverse = 0;
+        var goal = new Vector3(0, 0, 40); // dead ahead: with nothing in the way, no steering at all
+
+        PolicePursuit.Gameplay.PoliceChase.Steer(car, goal, false, 0.02f, ref stuck, ref reverse);
+        Assert.AreEqual(0, car.Steer, 0.05f);
+        Assert.AreEqual(1, car.Pedal);
+
+        var person = PolicePursuit.Gameplay.Pedestrian.Create(world.transform, Vector3.zero, 0, 1, Color.white);
+        person.enabled = false; // stands still where it is put
+        person.transform.position = new Vector3(0.6f, 0, -20); // just right of the car's path
+        person.gameObject.layer = 0; // as while crossing
+        Physics.SyncTransforms();
+        PolicePursuit.Gameplay.PoliceChase.Steer(car, goal, false, 0.02f, ref stuck, ref reverse);
+        Object.Destroy(person.gameObject);
+        Assert.Less(car.Steer, -0.5f, "swerves away, to the left");
+        Assert.AreEqual(-1, car.Pedal, "and brakes hard");
+    }
+
 }

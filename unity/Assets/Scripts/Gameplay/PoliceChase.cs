@@ -98,11 +98,17 @@ namespace PolicePursuit.Gameplay
             // The cast starts outside the car's own hull, which it would otherwise hit.
             float look = Mathf.Clamp(Mathf.Abs(speed) * 1.2f, 8, 25);
             var eye = transform.position + Vector3.up * 0.8f + transform.forward * 2.3f;
-            if (Physics.SphereCast(eye, 1f, transform.forward, out var hit, look) && hit.collider.GetComponentInParent<CivilCar>() != null)
+            // People on a crossing (only they are on a layer this cast sees) get a harder swerve and a full brake.
+            if (Physics.SphereCast(eye, 1f, transform.forward, out var hit, look))
             {
-                float side = transform.InverseTransformPoint(hit.collider.bounds.center).x;
-                steer = Mathf.Clamp(steer - Mathf.Sign(side) * 0.8f, -1, 1);
-                if (hit.distance < 6 && speed > 6) pedal = -0.5f;
+                bool person = hit.collider.GetComponentInParent<Pedestrian>() != null;
+                if (person || hit.collider.GetComponentInParent<CivilCar>() != null)
+                {
+                    float side = transform.InverseTransformPoint(hit.collider.bounds.center).x;
+                    steer = Mathf.Clamp(steer - Mathf.Sign(side) * (person ? 1 : 0.8f), -1, 1);
+                    if (person && hit.distance < 12 && speed > 4) pedal = -1;
+                    else if (hit.distance < 6 && speed > 6) pedal = -0.5f;
+                }
             }
             car.Steer = steer;
             car.Pedal = pedal;
