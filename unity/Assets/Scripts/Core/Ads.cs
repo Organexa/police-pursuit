@@ -17,9 +17,9 @@ namespace PolicePursuit.Core
     public class Ads : MonoBehaviour, IAds
     {
         // Public values from the LevelPlay dashboard. While any is empty, ads and the consent choice are hidden.
-        static readonly string AppKey = "";
-        static readonly string RewardedId = "";
-        static readonly string InterstitialId = "";
+        static readonly string AppKey = "29f270e3d";
+        static readonly string RewardedId = "qwz91ifldg03ngnb";
+        static readonly string InterstitialId = "vcfg6ilud443uauu";
 
         const float Retry = 30;
 
