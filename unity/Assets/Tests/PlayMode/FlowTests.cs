@@ -475,7 +475,7 @@ public class FlowTests
         Assert.IsFalse(world.Police.gameObject.activeSelf, "no police chaser when you are the police");
         Assert.IsFalse(world.Suspect.gameObject.activeSelf);
         Assert.AreEqual("Chase the escaped prisoner's car", world.Objective);
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(2); // settles, then pulls away from a standstill
         var fleer = world.Fleer.transform;
         Assert.Greater(Vector3.Distance(fleer.position, PolicePursuit.Gameplay.Mission.FleeSpawn), 3, "the escapee drives off");
 
