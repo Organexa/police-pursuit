@@ -51,6 +51,8 @@ namespace PolicePursuit.Gameplay
         public int Wanted => Chased ? Core.WantedLevel.ForDuration(ChaseTime) : 0;
         public Helicopter Heli { get; private set; }
         public PoliceDog Dog { get; private set; }
+        public PrintTrail Footprints { get; private set; } // yours, for a few seconds after wading
+        bool walkerWasWet;
         public const float DogRest = 30; // after a dog loses your scent, none comes out again for this long
         float noDogUntil;
 
@@ -166,6 +168,7 @@ namespace PolicePursuit.Gameplay
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
             Heli = Helicopter.Create(transform);
             Dog = PoliceDog.Create(transform);
+            Footprints = new PrintTrail(transform, 0.8f, new Vector3(0.16f, 0.01f, 0.28f));
             Dog.Barked += () => Core.GameManager.Instance?.Sound?.Bark();
             var tunnelMid = (PoliceChase.Centre(TunnelFrom) + PoliceChase.Centre(TunnelTo)) / 2;
             Solid(tunnelMid + Vector3.up * TunnelRoof, new Vector3(Road + 1, 1, Pitch - Road), Shapes.Hex(0x2A2E38)).name = "Tunnel roof";
@@ -314,6 +317,8 @@ namespace PolicePursuit.Gameplay
             ChaseTime = loseTime = 0;
             Heli.Leave();
             Dog.Recall();
+            Footprints.Clear();
+            walkerWasWet = false;
             noDogUntil = 0;
             Traffic.ResetTraffic();
             bustTime = cuffTime = 0;
@@ -328,7 +333,7 @@ namespace PolicePursuit.Gameplay
             if (Dog.GaveUp) { Dog.Recall(); noDogUntil = Time.time + DogRest; return false; }
             if (!Dog.gameObject.activeSelf && Time.time >= noDogUntil
                 && Vector3.Distance(car.position, Walker.transform.position) < PoliceDog.ReleaseRange)
-                Dog.Release(new Vector3(car.position.x, 0.1f, car.position.z) - car.right * 2, Walker.transform, Melee);
+                Dog.Release(new Vector3(car.position.x, 0.1f, car.position.z) - car.right * 2, Walker.transform, Melee, Footprints);
             if (!Dog.Holding) return false;
             Busts++;
             if (Mission != null) Mission.End(Mission.Outcome.Busted);
@@ -458,10 +463,14 @@ namespace PolicePursuit.Gameplay
                 }
             }
             if (cam == null) return;
+            Footprints.Tick(Walker.transform, Time.deltaTime); // also in the car, so old prints still fade
             if (OnFoot)
             {
                 if (Melee.Busy || Melee.Blocking) Walker.Move = Vector2.zero; // planted while striking or guarding
-                Walker.SpeedScale = InWater(Walker.transform.position) ? 0.5f : 1;
+                bool wet = InWater(Walker.transform.position);
+                Walker.SpeedScale = wet ? 0.5f : 1;
+                if (walkerWasWet && !wet) Footprints.Soak(Walker.transform.position);
+                walkerWasWet = wet;
                 Walker.Tick(LookYaw, Time.deltaTime);
             }
             var goal = CamGoal(out var look);

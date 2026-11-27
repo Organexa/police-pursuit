@@ -22,16 +22,15 @@ namespace PolicePursuit.Gameplay
         public bool Shaking => shakeLeft > 0;
         float shakeLeft;
         bool wasSwimming;
-        // Wet paw prints for a while after a swim (a fixed pool, no allocation during play).
-        public const float WetFor = 6, PrintEvery = 0.6f, PrintLife = 3;
-        public const int PrintPool = 20;
-        public bool Wet => wetLeft > 0;
-        public int PrintsShowing { get { int n = 0; foreach (var p in prints) if (p != null && p.activeSelf) n++; return n; } }
-        readonly GameObject[] prints = new GameObject[PrintPool];
-        readonly float[] printedAt = new float[PrintPool];
-        int nextPrint;
-        float wetLeft;
-        Vector3 lastPrint;
+        // Wet paw prints for a while after a swim.
+        public const float WetFor = PrintTrail.WetFor, PrintLife = PrintTrail.Life, PrintEvery = 0.6f;
+        public const int PrintPool = PrintTrail.Pool;
+        public bool Wet => paws.Wet;
+        public int PrintsShowing => paws.Showing;
+        PrintTrail paws;
+        // The player's own wet footprints: a dog that has lost sight (or the scent) follows the newest it can see.
+        public const float TrackRange = 20;
+        PrintTrail footprints;
         // Barks while it can see the player close by: the police cannot be lost while it does.
         public const float BarkRange = 30, BarkEvery = 1.5f;
         public bool Barking { get; private set; }
@@ -58,6 +57,7 @@ namespace PolicePursuit.Gameplay
             Shapes.Box(go.transform, new Vector3(0, 0.7f, 0.5f), new Vector3(0.25f, 0.25f, 0.3f), Shapes.Hex(0x4A3320)); // head
             var d = go.AddComponent<PoliceDog>();
             d.body = go.AddComponent<CharacterController>();
+            d.paws = new PrintTrail(parent, PrintEvery, new Vector3(0.14f, 0.01f, 0.18f));
             d.body.height = 0.8f;
             d.body.radius = 0.25f;
             d.body.center = new Vector3(0, 0.45f, 0);
@@ -65,15 +65,17 @@ namespace PolicePursuit.Gameplay
             return d;
         }
 
-        public void Release(Vector3 at, Transform player, MeleeController playerMelee)
+        public void Release(Vector3 at, Transform player, MeleeController playerMelee, PrintTrail playerFootprints = null)
         {
+            footprints = playerFootprints;
             body.enabled = false;
             transform.position = at;
             body.enabled = true;
             target = player;
             targetMelee = playerMelee;
-            routing = false;
-            held = fall = sniffed = shakeLeft = wetLeft = 0;
+            routing = detouring = false; // a detour left over from the last dog would send this one the wrong way
+            held = fall = sniffed = shakeLeft = 0;
+            paws.Clear();
             wasSwimming = false;
             LostScent = false;
             LastScent = player.position;
@@ -85,8 +87,7 @@ namespace PolicePursuit.Gameplay
             gameObject.SetActive(false);
             held = sniffed = 0;
             LostScent = false; // a stale "gave up" would keep every later dog in the car
-            wetLeft = 0;
-            foreach (var p in prints) if (p != null) p.SetActive(false); // only the dog ages them
+            paws.Clear(); // only the dog ages them
             Barking = false;
         }
 
@@ -94,11 +95,11 @@ namespace PolicePursuit.Gameplay
         {
             if (target == null) return;
             float dt = Time.deltaTime;
-            AgePrints();
-            if (wasSwimming && !Swimming) { shakeLeft = ShakeFor; wetLeft = WetFor; lastPrint = transform.position; }
-            if (Wet && !Swimming) LeavePrint(dt);
+            if (wasSwimming && !Swimming) { shakeLeft = ShakeFor; paws.Soak(transform.position); }
+            paws.Tick(transform, Swimming ? 0 : dt);
             wasSwimming = Swimming;
             if (Shaking) { Shake(dt); return; }
+            if (LostScent && SeesFootprint(out _)) { LostScent = false; sniffed = 0; } // picked the trail up again
             if (LostScent) { Barking = false; Sniff(dt); return; }
             var from = transform.position + Vector3.up * 0.6f;
             var to = target.position + Vector3.up * 0.6f;
@@ -107,6 +108,7 @@ namespace PolicePursuit.Gameplay
             LastScent = target.position;
             Vector3 goal;
             if (inSight) { goal = target.position; routing = detouring = false; }
+            else if (SeesFootprint(out var print)) { goal = print; detouring = false; }
             else if (detouring && Flat(detour - transform.position) > 1) goal = detour;
             else if (Detour(hit.collider, target.position, out detour)) { detouring = true; goal = detour; }
             else
@@ -164,28 +166,14 @@ namespace PolicePursuit.Gameplay
 
         static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
-        void LeavePrint(float dt)
+        // The player's newest wet footprint, if it is close and in plain view.
+        bool SeesFootprint(out Vector3 at)
         {
-            wetLeft -= dt;
-            if (Flat(transform.position - lastPrint) < PrintEvery) return;
-            lastPrint = transform.position;
-            if (prints[nextPrint] == null)
-            {
-                prints[nextPrint] = Shapes.Box(transform.parent, Vector3.zero, new Vector3(0.14f, 0.01f, 0.18f), Shapes.Hex(0x14161C));
-                prints[nextPrint].name = "Paw print";
-            }
-            var p = prints[nextPrint];
-            p.transform.position = new Vector3(transform.position.x, 0.07f, transform.position.z) + transform.right * (nextPrint % 2 == 0 ? 0.12f : -0.12f);
-            p.transform.rotation = transform.rotation;
-            p.SetActive(true);
-            printedAt[nextPrint] = Time.time;
-            nextPrint = (nextPrint + 1) % PrintPool;
-        }
-
-        void AgePrints()
-        {
-            for (int i = 0; i < PrintPool; i++)
-                if (prints[i] != null && prints[i].activeSelf && Time.time - printedAt[i] > PrintLife) prints[i].SetActive(false);
+            at = default;
+            if (footprints == null || !footprints.Newest(out at)) return false;
+            if (Flat(at - transform.position) > TrackRange) return false;
+            // The newest print is right under the player, so seeing them standing on it counts as seeing it.
+            return !Physics.Linecast(transform.position + Vector3.up * 0.6f, at + Vector3.up * 0.3f, out var hit) || hit.transform == target;
         }
 
         void Shake(float dt)

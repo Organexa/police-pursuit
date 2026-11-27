@@ -622,8 +622,8 @@ public class FlowTests
             if (!p.Crossing) Assert.AreEqual(half, ring, 0.8f, "stays on the pavement (or is on a crossing)");
         }
 
-        // Shots pass through them and they are never a target.
-        var walker = people[0];
+        // Shots pass through them and they are never a target (someone on the pavement: on a crossing cars can see them).
+        var walker = people.Find(p => !p.Crossing && !p.WaitingToCross);
         var off0 = walker.transform.position - walker.Block;
         var outward = Mathf.Abs(off0.x) > Mathf.Abs(off0.z) ? new Vector3(Mathf.Sign(off0.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off0.z));
         var from = walker.transform.position + outward * 3 + Vector3.up * 1.2f; // from the road side
@@ -839,14 +839,15 @@ public class FlowTests
         world.ToggleSiren();
         var off = waiting.transform.position - waiting.Block;
         var road = Mathf.Abs(off.x) > Mathf.Abs(off.z) ? new Vector3(Mathf.Sign(off.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off.z));
-        int crossed = waiting.Crossings;
-        bool started = false;
+        bool started = false, wasCrossing = false;
         // A whole light cycle with your siren going just beside them: they never step out.
         for (float t = 0; t < PolicePursuit.Gameplay.TrafficLights.Cycle + 1; t += Time.deltaTime)
         {
             world.Car.Place(waiting.transform.position + road * 8 + Vector3.up * 0.6f, 0);
             world.Car.Body.linearVelocity = Vector3.forward * 6;
-            if (t > 0.3f && waiting.Crossing && waiting.Crossings == crossed) started = true; // the hold is set 4 times a second
+            // Only a crossing that starts once the hold is in place counts (it is set 4 times a second).
+            if (t > 0.3f && waiting.Crossing && !wasCrossing) started = true;
+            wasCrossing = waiting.Crossing;
             yield return null;
         }
         Assert.IsTrue(waiting.HoldForSiren);
@@ -1493,4 +1494,52 @@ public class FlowTests
         Assert.AreEqual(0, dog.PrintsShowing, "and the prints fade by themselves");
         world.Police.enabled = true;
     }
+
+    [UnityTest]
+    public IEnumerator PoliceDogFollowsYourWetFootprints()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var dog = world.Dog;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var pond = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsTrue(world.ExitCar());
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        // You in the pond, the police car parked between you and the dog on the east bank: out of its sight.
+        // 8 m from you, just outside the 7 m bust range, so wading slowly past it is not a bust.
+        world.Walker.Place(pond + new Vector3(0, 0, 11), 0);
+        police.Place(pond + new Vector3(8, 0.6f, 11), 90);
+        yield return new WaitForSeconds(0.8f); // settles onto its wheels, low enough to block the dog's view
+        dog.Release(pond + new Vector3(16, 0.1f, 11), world.Walker.transform, world.Melee, world.Footprints);
+        yield return null;
+        yield return null;
+        Assert.IsTrue(dog.LostScent, "in the water and out of sight");
+        Assert.AreEqual(0, world.Footprints.Showing, "no footprints yet");
+        // The car only had to hide you at the start; now it moves off so it cannot block the dog's view of the prints.
+        police.Place(PolicePursuit.Gameplay.OpenWorld.PoliceSpawn, 0);
+
+        // Wade out north and walk on: wet footprints, which the dog spots.
+        world.LookYaw = 0;
+        bool pickedUp = false;
+        for (float t = 0; t < 5 && !pickedUp; t += Time.deltaTime)
+        {
+            world.Walker.Move = Vector2.up;
+            yield return null;
+            pickedUp = !dog.LostScent;
+        }
+        world.Footprints.Newest(out var print);
+        bool blocked = Physics.Linecast(dog.transform.position + Vector3.up * 0.6f, print + Vector3.up * 0.3f, out var block);
+        string seen = $"dog at {dog.transform.position} (active {dog.gameObject.activeSelf}, shaking {dog.Shaking}), newest print {print}, "
+            + $"{Vector3.Distance(dog.transform.position, print):F1} m away, view blocked by {(blocked ? block.collider.name : "nothing")}";
+        Assert.IsTrue(world.Footprints.Wet, "out of the water: still wet");
+        Assert.Greater(world.Footprints.Showing, 0, "leaving footprints");
+        Assert.IsTrue(pickedUp, "the dog picks the trail up again from them; " + seen);
+        world.Police.enabled = true;
+    }
+
 }
