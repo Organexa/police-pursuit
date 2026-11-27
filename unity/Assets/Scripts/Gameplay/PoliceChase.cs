@@ -16,15 +16,11 @@ namespace PolicePursuit.Gameplay
         Vector2Int next;
         bool routing;
         float stuckTime, reverseLeft;
-        Transform red, blue;
 
         void Awake()
         {
             car = GetComponent<VehicleController>();
             car.SpeedLimit = VehicleController.TopSpeed * 0.9f;
-            var body = transform.GetChild(0);
-            red = body.GetChild(2);
-            blue = body.GetChild(3);
         }
 
         public static Vector2Int Node(Vector3 p) => new Vector2Int(Index(p.x), Index(p.z));
@@ -50,9 +46,7 @@ namespace PolicePursuit.Gameplay
 
         void Update()
         {
-            bool redOn = Time.time % 0.4f < 0.2f;
-            red.gameObject.SetActive(redOn);
-            blue.gameObject.SetActive(!redOn);
+            car.Flash(true);
             if (Target == null) { car.Pedal = car.Steer = 0; return; } // nobody to chase: stop
 
             var from = transform.position + Vector3.up;

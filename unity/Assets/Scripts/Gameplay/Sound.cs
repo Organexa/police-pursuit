@@ -16,7 +16,7 @@ namespace PolicePursuit.Gameplay
 
         GameManager game;
         AudioSource engine, siren, effects, ui;
-        AudioClip crash, coin, whoosh, click;
+        AudioClip crash, coin, whoosh, click, horn;
         readonly AudioSource[] music = new AudioSource[3];
 
         // Layer 0 (bass and kick) always plays; drums join at two stars and the lead at three, only while driving.
@@ -54,12 +54,15 @@ namespace PolicePursuit.Gameplay
             coin = Clip("coin", 0.18f, Coin);
             whoosh = Clip("whoosh", 0.3f, Whoosh());
             click = Clip("click", 0.04f, t => Tone(660, t) * (1 - t / 0.04f));
+            // Two-note car horn, faded in and out so it does not click.
+            horn = Clip("horn", 0.45f, t => (Tone(415, t) + Tone(523, t)) * 0.35f * Mathf.Min(1, t * 40, (0.45f - t) * 20));
         }
 
         public void Hit() => effects.PlayOneShot(crash, 0.8f);
         public void CoinPickup() => effects.PlayOneShot(coin, 0.5f);
         public void NearMiss() => effects.PlayOneShot(whoosh, 0.6f);
         public void Click() => ui.PlayOneShot(click, 0.5f);
+        public void Horn() => effects.PlayOneShot(horn, 0.7f);
 
         void Update()
         {
@@ -68,7 +71,11 @@ namespace PolicePursuit.Gameplay
             var car = game.Player;
             engine.volume = driving ? 0.25f : 0;
             engine.pitch = EnginePitch(car.Speed, car.TopSpeed);
-            siren.volume = driving ? 0.35f * SirenVolume(game.Traffic.NearestCop(car.transform.position)) : 0;
+            float sirenAt = driving ? game.Traffic.NearestCop(car.transform.position) : float.MaxValue;
+            var world = game.State == GameState.FreeRoam ? game.World : null;
+            if (world != null) // your own siren is right on top of you; the chaser's fades with distance
+                sirenAt = world.SirenOn ? 0 : world.Police.gameObject.activeSelf ? world.PoliceDistance : float.MaxValue;
+            siren.volume = 0.35f * SirenVolume(sirenAt);
             for (int i = 0; i < music.Length; i++)
                 music[i].volume = game.Settings.musicVolume * MusicGain(i, game.Wanted, driving);
         }

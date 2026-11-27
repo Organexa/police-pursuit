@@ -637,7 +637,7 @@ public class FlowTests
         Assert.IsTrue(walker.Panicking, "gunfire nearby sends people running");
         Assert.Greater(walker.Speed, PolicePursuit.Gameplay.Pedestrian.WalkSpeed);
 
-        var other = people[1];
+        var other = people.Find(p => p != walker && !p.Crossing && !p.WaitingToCross); // on the pavement, by a wall
         world.Car.Place(other.transform.position + Vector3.up * 0.6f, 0); // a car right on the pavement
         yield return new WaitForFixedUpdate();
         yield return new WaitForFixedUpdate();
@@ -713,4 +713,148 @@ public class FlowTests
         var off = crossed.transform.position - crossed.Block;
         Assert.AreEqual(PolicePursuit.Gameplay.Pedestrian.WalkHalf, Mathf.Max(Mathf.Abs(off.x), Mathf.Abs(off.z)), 0.8f, "on the next block's pavement");
     }
+
+    [UnityTest]
+    public IEnumerator OpenWorldHornHurriesPeopleNearby()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var people = world.People.People;
+        var near = people[0];
+        world.Car.Place(near.transform.position + (near.Block - near.transform.position).normalized * -6 + Vector3.up * 0.6f, 0);
+        yield return new WaitForFixedUpdate();
+        PolicePursuit.Gameplay.Pedestrian far = null;
+        foreach (var p in people)
+            if (Vector3.Distance(p.transform.position, world.Car.transform.position) > 40) { far = p; break; }
+
+        Assert.IsTrue(world.Honk());
+        Assert.IsFalse(world.Honk(), "a short gap between honks");
+        Assert.IsTrue(near.Hurried);
+        if (!near.Panicking) Assert.AreEqual(PolicePursuit.Gameplay.Pedestrian.HurrySpeed, near.Speed);
+        Assert.IsNotNull(far);
+        Assert.IsFalse(far.Hurried, "out of earshot");
+
+        yield return new WaitForSeconds(PolicePursuit.Gameplay.OpenWorld.HornEvery + 0.1f);
+        world.Car.Place(world.Car.transform.position, 0);
+        Assert.IsTrue(world.ExitCar());
+        Assert.IsFalse(world.Honk(), "no horn on foot");
+    }
+
+    [UnityTest]
+    public IEnumerator OpenWorldTrafficPullsOverForThePolice()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        var civ = world.Traffic.Cars[1];
+        civ.Place(new Vector2Int(4, 0), new Vector2Int(4, 1)); // northbound up the east edge, a long straight
+        float laneX = PolicePursuit.Gameplay.CivilCar.LaneStart(new Vector2Int(4, 0), new Vector2Int(4, 1)).x;
+        police.Place(civ.transform.position - civ.transform.forward * 12 + Vector3.up * 0.6f, 0);
+
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsFalse(civ.PullingOver, "a parked police car has no siren going");
+        for (float t = 0; t < 2; t += Time.deltaTime)
+        {
+            // keep the police car rolling just behind it
+            police.Place(civ.transform.position - civ.transform.forward * 10 + Vector3.up * 0.6f, 0);
+            police.Body.linearVelocity = Vector3.forward * 6;
+            yield return null;
+        }
+        Assert.IsTrue(civ.PullingOver);
+        Assert.LessOrEqual(civ.Speed, PolicePursuit.Gameplay.CivilCar.PullOverSpeed + 0.01f, "slows right down");
+        Assert.Greater(civ.transform.position.x - laneX, 0.6f, "eases towards the kerb on its right");
+
+        police.Place(PolicePursuit.Gameplay.OpenWorld.PoliceSpawn, 0);
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsFalse(civ.PullingOver, "carries on once the police have gone");
+    }
+
+    [UnityTest]
+    public IEnumerator PoliceSideHasASirenThatClearsTraffic()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        Assert.IsFalse(game.World.ToggleSiren(), "no siren outside the police side");
+
+        game.StartMission(PolicePursuit.Gameplay.Mission.Role.Police);
+        var world = game.World;
+        Assert.IsTrue(world.Car.HasLightBar);
+        Assert.IsFalse(world.SirenOn, "starts off");
+        yield return null;
+        Assert.IsFalse(world.Car.LightsShowing);
+        Assert.IsTrue(world.ToggleSiren());
+        yield return null;
+        Assert.IsTrue(world.Car.LightsShowing, "lights flash");
+
+        var civ = world.Traffic.Cars[1];
+        civ.Place(new Vector2Int(4, 0), new Vector2Int(4, 1));
+        for (float t = 0; t < 2; t += Time.deltaTime)
+        {
+            world.Car.Place(civ.transform.position - civ.transform.forward * 10 + Vector3.up * 0.6f, 0);
+            world.Car.Body.linearVelocity = Vector3.forward * 6;
+            yield return null;
+        }
+        Assert.IsTrue(civ.PullingOver, "traffic makes way for your siren");
+
+        world.ToggleSiren();
+        for (float t = 0; t < 0.5f; t += Time.deltaTime)
+        {
+            world.Car.Place(civ.transform.position - civ.transform.forward * 10 + Vector3.up * 0.6f, 0);
+            world.Car.Body.linearVelocity = Vector3.forward * 6;
+            yield return null;
+        }
+        Assert.IsFalse(civ.PullingOver, "siren off: no reason to pull over");
+        Assert.IsFalse(world.Car.LightsShowing);
+    }
+
+    [UnityTest]
+    public IEnumerator SirenHoldsPedestriansAtTheKerb()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.StartMission(PolicePursuit.Gameplay.Mission.Role.Police);
+        var world = game.World;
+        PolicePursuit.Gameplay.Pedestrian.CrossChance = 1;
+        Time.timeScale = 4;
+        PolicePursuit.Gameplay.Pedestrian waiting = null;
+        for (float t = 0; t < 60 && waiting == null; t += Time.deltaTime)
+        {
+            foreach (var p in world.People.People) if (p.WaitingToCross) { waiting = p; break; }
+            yield return null;
+        }
+        Assert.IsNotNull(waiting, "someone waits at a corner");
+
+        world.ToggleSiren();
+        var off = waiting.transform.position - waiting.Block;
+        var road = Mathf.Abs(off.x) > Mathf.Abs(off.z) ? new Vector3(Mathf.Sign(off.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off.z));
+        int crossed = waiting.Crossings;
+        bool started = false;
+        // A whole light cycle with your siren going just beside them: they never step out.
+        for (float t = 0; t < PolicePursuit.Gameplay.TrafficLights.Cycle + 1; t += Time.deltaTime)
+        {
+            world.Car.Place(waiting.transform.position + road * 8 + Vector3.up * 0.6f, 0);
+            world.Car.Body.linearVelocity = Vector3.forward * 6;
+            if (t > 0.3f && waiting.Crossing && waiting.Crossings == crossed) started = true; // the hold is set 4 times a second
+            yield return null;
+        }
+        Assert.IsTrue(waiting.HoldForSiren);
+        Assert.IsFalse(started, "no crossing while a siren is close");
+        Assert.IsTrue(waiting.WaitingToCross, "still waiting, not wandered off");
+
+        world.ToggleSiren();
+        for (float t = 0; t < 1; t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsFalse(waiting.HoldForSiren, "siren off: free to cross on the next red");
+    }
+
 }

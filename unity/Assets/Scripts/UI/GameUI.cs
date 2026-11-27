@@ -34,6 +34,7 @@ namespace PolicePursuit.UI
         Text speedText, bustText, doorText;
         GameObject driveControls, footControls;
         HoldButton sprint, jump, fire, block, arrest;
+        Text sirenButton;
         Text objectiveText, missionResultText;
         GameObject missionIntro, missionResult;
         Text ammoText;
@@ -205,6 +206,8 @@ namespace PolicePursuit.UI
             gas = Hold(drive, "GAS", bottomRight, new Vector2(-16, 16), new Vector2(100, 120));
             brake = Hold(drive, "BRAKE", bottomRight, new Vector2(-128, 16), new Vector2(100, 96));
             handbrake = Hold(drive, "HAND", bottomRight, new Vector2(-128, 124), new Vector2(100, 56));
+            MakeButton(drive, "HORN", bottomRight, new Vector2(-16, 150), new Vector2(100, 48), Honk);
+            sirenButton = MakeButton(drive, "SIREN", bottomRight, new Vector2(-128, 184), new Vector2(100, 44), () => game.World.ToggleSiren());
 
             footControls = Panel(root, "Foot", Color.clear);
             footControls.AddComponent<Image>().color = Color.clear; // catches camera drags behind the buttons
@@ -277,6 +280,11 @@ namespace PolicePursuit.UI
             w.Melee.Dodge(Quaternion.Euler(0, w.LookYaw, 0) * new Vector3(move.x, 0, move.y));
         }
 
+        void Honk()
+        {
+            if (game.World.Honk()) game.Sound.Horn();
+        }
+
         void ToggleDoor()
         {
             var world = game.World;
@@ -322,6 +330,10 @@ namespace PolicePursuit.UI
                 car.Steer = Mathf.Clamp(steer, -1, 1);
                 car.Pedal = Mathf.Clamp(pedal, -1, 1);
                 car.Handbrake = handbrake.Held || Gameplay.KeyInput.Drift();
+                if (Gameplay.KeyInput.HornPressed()) Honk();
+                if (Gameplay.KeyInput.SirenPressed()) world.ToggleSiren();
+                sirenButton.transform.parent.gameObject.SetActive(world.PlayerIsPolice);
+                sirenButton.text = world.SirenOn ? "SIREN ON" : "SIREN";
                 speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h    Police {Mathf.RoundToInt(world.PoliceDistance)} m";
             }
             var m = world.Mission;

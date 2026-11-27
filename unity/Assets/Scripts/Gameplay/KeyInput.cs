@@ -56,6 +56,8 @@ namespace PolicePursuit.Gameplay
         public static bool Interact() => Pressed(KeyCode.F);
         public static bool JumpPressed() => Pressed(KeyCode.Space);
         public static bool ReloadPressed() => Pressed(KeyCode.R);
+        public static bool HornPressed() => Pressed(KeyCode.H);
+        public static bool SirenPressed() => Pressed(KeyCode.N);
         // J punch, K kick, Q dodge, hold L to block.
         public static bool PunchPressed() => Pressed(KeyCode.J);
         public static bool KickPressed() => Pressed(KeyCode.K);
@@ -108,6 +110,8 @@ namespace PolicePursuit.Gameplay
             {
                 case KeyCode.F: return k.fKey.wasPressedThisFrame;
                 case KeyCode.R: return k.rKey.wasPressedThisFrame;
+                case KeyCode.H: return k.hKey.wasPressedThisFrame;
+                case KeyCode.N: return k.nKey.wasPressedThisFrame;
                 case KeyCode.J: return k.jKey.wasPressedThisFrame;
                 case KeyCode.K: return k.kKey.wasPressedThisFrame;
                 case KeyCode.Q: return k.qKey.wasPressedThisFrame;

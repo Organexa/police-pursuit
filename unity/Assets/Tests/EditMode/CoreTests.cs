@@ -468,4 +468,18 @@ public class CoreTests
         Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(1, -1, half)), new Vector3(half, 0, -half));
         Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(-1, -1, half)), new Vector3(-half, 0, -half));
     }
+
+    [Test]
+    public void CarsPullOverForPoliceBehindNotAhead()
+    {
+        var car = new GameObject("pull over test").transform;
+        try
+        {
+            Assert.IsTrue(CivilTraffic.ShouldPullOver(car, new Vector3(0, 0, -10), 25), "close behind");
+            Assert.IsTrue(CivilTraffic.ShouldPullOver(car, new Vector3(3, 0, 0), 25), "alongside");
+            Assert.IsFalse(CivilTraffic.ShouldPullOver(car, new Vector3(0, 0, 10), 25), "already past");
+            Assert.IsFalse(CivilTraffic.ShouldPullOver(car, new Vector3(0, 0, -40), 25), "too far to hear");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(car.gameObject); }
+    }
 }

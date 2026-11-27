@@ -119,6 +119,7 @@ namespace PolicePursuit.Gameplay
             Traffic = new GameObject("Traffic").AddComponent<CivilTraffic>();
             Traffic.transform.SetParent(transform, false);
             Traffic.Player = Car.transform;
+            Traffic.PoliceCar = Police.GetComponent<VehicleController>();
             // Half the endless run's density: the district is small.
             Traffic.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()) / 2);
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
@@ -128,6 +129,7 @@ namespace PolicePursuit.Gameplay
             People.transform.SetParent(transform, false);
             People.Init(Core.GraphicsPresets.MaxCars(Core.GraphicsPresets.Load()));
             People.PoliceCar = Police.transform;
+            People.PoliceVehicle = Police.GetComponent<VehicleController>();
             People.PlayerCar = Car;
             Fleer = VehicleController.Create(transform, Mission.FleeSpawn, Shapes.Hex(0xFF8A00)).gameObject.AddComponent<FleeDriver>();
             Begin(null);
@@ -140,6 +142,8 @@ namespace PolicePursuit.Gameplay
             reported = false;
             ResetCar();
             bool police = side == Mission.Role.Police, prisoner = side == Mission.Role.Prisoner;
+            SirenOn = false;
+            if (police) Car.AddLightBar(); // stays fitted afterwards, dark unless the siren is on
             Police.gameObject.SetActive(!police);
             Fleer.gameObject.SetActive(police);
             Fleer.enabled = true;
@@ -154,6 +158,29 @@ namespace PolicePursuit.Gameplay
         }
 
         public void Restart() => Begin(Mission?.Side);
+
+        // The player's own siren, only when playing the police side: lights flash and traffic makes way.
+        public bool PlayerIsPolice => Mission != null && Mission.Side == Mission.Role.Police;
+        public bool SirenOn { get; private set; }
+
+        public bool ToggleSiren()
+        {
+            if (!PlayerIsPolice) return false;
+            SirenOn = !SirenOn;
+            return true;
+        }
+
+        public const float HornRange = 15, HornEvery = 0.6f;
+        float nextHorn;
+
+        // Only from the car. True when it sounded (not during the short gap between honks).
+        public bool Honk()
+        {
+            if (OnFoot || Time.time < nextHorn) return false;
+            nextHorn = Time.time + HornEvery;
+            People.HurryNear(Car.transform.position, HornRange);
+            return true;
+        }
 
         public void PlaceSuspect(Vector3 feet)
         {
@@ -261,6 +288,9 @@ namespace PolicePursuit.Gameplay
             Suspect.Target = OnFoot ? Walker.transform : null;
             Fleer.From = Player;
             Traffic.Player = Player;
+            Car.Flash(SirenOn);
+            Traffic.PlayerSiren = SirenOn ? Car : null;
+            People.PlayerSiren = SirenOn;
             if (Mission != null && Mission.Result != Mission.Outcome.None) return;
             bool held = Police.gameObject.activeSelf && PoliceDistance < BustRange && PlayerSpeed < BustSpeed;
             bustTime = held ? bustTime + Time.deltaTime : 0;

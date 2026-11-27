@@ -12,15 +12,17 @@ namespace PolicePursuit.Gameplay
     public class Pedestrian : MonoBehaviour
     {
         public const float Pavement = 2; // metres between the kerb and the building
-        public const float WalkSpeed = 1.4f, RunSpeed = 4, PanicFor = 4, DiveFor = 2;
+        public const float WalkSpeed = 1.4f, HurrySpeed = 2.5f, RunSpeed = 4, PanicFor = 4, DiveFor = 2, HurryFor = 3;
 
-        public float Speed => Time.time < panicUntil ? RunSpeed : WalkSpeed;
+        public float Speed => Time.time < panicUntil ? RunSpeed : Time.time < hurryUntil ? HurrySpeed : WalkSpeed;
+        public bool Hurried => Time.time < hurryUntil;
         public bool Panicking => Time.time < panicUntil;
         public bool Diving => Time.time < diveUntil;
         public Vector3 Block { get; private set; }
         public static float CrossChance = 0.5f; // share of corners where they decide to cross
         public bool Crossing { get; private set; }
         public bool WaitingToCross { get; private set; }
+        public bool HoldForSiren { get; set; } // set by Pedestrians while an emergency vehicle is close
         public int Crossings { get; private set; }
         public TrafficLights.Light LightAtStart { get; private set; } // for the road being crossed
         public float RedLeftAtStart { get; private set; }
@@ -33,7 +35,7 @@ namespace PolicePursuit.Gameplay
         float half; // from the block centre to the walking line
         float along; // metres round the loop
         int dir;
-        float panicUntil, diveUntil;
+        float panicUntil, diveUntil, hurryUntil;
         Transform figure;
 
         // Walking line: the pavement centre, half a pavement out from the building face.
@@ -76,6 +78,8 @@ namespace PolicePursuit.Gameplay
         }
 
         public void Panic() => panicUntil = Time.time + PanicFor;
+        // A horn: walk faster for a few seconds. It never makes anyone step out against the lights.
+        public void Hurry() => hurryUntil = Time.time + HurryFor;
 
         // The loop position of a block corner: south-west 0, south-east 1 side, north-east 2, north-west 3.
         public static float CornerAlong(int sx, int sz, float half) =>
@@ -87,11 +91,16 @@ namespace PolicePursuit.Gameplay
             figure.localScale = new Vector3(0.5f, 0.8f, 0.5f);
             figure.localPosition = new Vector3(0, 0.85f, 0);
             float dt = Time.deltaTime;
-            if (Crossing) { Cross(dt); return; }
+            if (Crossing)
+            {
+                if (HoldForSiren) Hurry(); // get off the road quickly
+                Cross(dt);
+                return;
+            }
             if (WaitingToCross)
             {
                 if (SafeToCross()) StartCrossing();
-                else if (Time.time > waitUntil) WaitingToCross = false; // gave up: walk on
+                else if (Time.time > waitUntil && !HoldForSiren) WaitingToCross = false; // gave up: walk on
                 return;
             }
             float side = half * 2, before = along;
@@ -133,7 +142,7 @@ namespace PolicePursuit.Gameplay
 
         // A fresh red for the road ahead, with time to get all the way over.
         bool SafeToCross() =>
-            TrafficLights.RedLeft(crossNode, crossRoadFrom, Time.time) >= CrossTime + 1;
+            !HoldForSiren && TrafficLights.RedLeft(crossNode, crossRoadFrom, Time.time) >= CrossTime + 1;
 
         void StartCrossing()
         {
@@ -180,10 +189,12 @@ namespace PolicePursuit.Gameplay
 
     public class Pedestrians : MonoBehaviour
     {
-        public const float ShotHeard = 30, PoliceNear = 15, FastCar = 10, FastCarNear = 10;
+        public const float ShotHeard = 30, PoliceNear = 15, FastCar = 10, FastCarNear = 10, SirenHold = 30;
         public readonly List<Pedestrian> People = new List<Pedestrian>();
         public Transform PoliceCar { get; set; }
         public VehicleController PlayerCar { get; set; }
+        public VehicleController PoliceVehicle { get; set; } // the chaser, for its siren
+        public bool PlayerSiren { get; set; }
         float nextCheck;
 
         static readonly Color[] Clothes = { Shapes.Hex(0xC9B79C), Shapes.Hex(0x5B6C8F), Shapes.Hex(0x8F5B5B), Shapes.Hex(0x6F8F5B) };
@@ -203,6 +214,14 @@ namespace PolicePursuit.Gameplay
 
         void OnDestroy() => WeaponController.AnyShot -= OnShot;
 
+        public int HurryNear(Vector3 at, float range)
+        {
+            int n = 0;
+            foreach (var p in People)
+                if (Vector3.Distance(p.transform.position, at) < range) { p.Hurry(); n++; }
+            return n;
+        }
+
         void OnShot(Vector3 at)
         {
             foreach (var p in People)
@@ -214,10 +233,13 @@ namespace PolicePursuit.Gameplay
         {
             if (Time.time < nextCheck) return;
             nextCheck = Time.time + 0.25f;
+            bool chaser = CivilTraffic.Sounding(PoliceVehicle), player = PlayerSiren && CivilTraffic.Sounding(PlayerCar);
             bool fast = PlayerCar != null && PlayerCar.gameObject.activeInHierarchy && PlayerCar.SpeedKmh / 3.6f > FastCar;
             foreach (var p in People)
             {
                 var at = p.transform.position;
+                p.HoldForSiren = (chaser && Vector3.Distance(at, PoliceVehicle.transform.position) < SirenHold)
+                    || (player && Vector3.Distance(at, PlayerCar.transform.position) < SirenHold);
                 if ((PoliceCar != null && PoliceCar.gameObject.activeInHierarchy && Vector3.Distance(at, PoliceCar.position) < PoliceNear)
                     || (fast && Vector3.Distance(at, PlayerCar.transform.position) < FastCarNear))
                     p.Panic();

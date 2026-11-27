@@ -65,7 +65,8 @@ namespace PolicePursuit.Gameplay
             to = b;
             toEnd = true;
             Crashed = false;
-            blockedFor = 0;
+            blockedFor = shift = applied = 0;
+            PullingOver = false;
             gameObject.SetActive(true);
             Speed = Cruise * 0.5f;
             Body.isKinematic = true; // driven by script; the player and police still bump into it
@@ -78,12 +79,20 @@ namespace PolicePursuit.Gameplay
         public Vector2Int Heading => to;
         public Vector2Int Coming => from;
         public bool WaitingAtLight { get; private set; }
+        // Set by CivilTraffic while a police car with its lights on is close behind: ease to the kerb and slow down.
+        public bool PullingOver { get; set; }
+        public const float PullOverShift = 1, PullOverSpeed = 2;
+        float shift, applied; // metres towards the kerb: wanted now, and already moved
 
         void FixedUpdate()
         {
             if (Crashed) return;
             float dt = Time.fixedDeltaTime;
-            var goal = toEnd ? LaneEnd(from, to) : LaneStart(from, to);
+            // Only along a straight road: never mid-turn in a crossroads.
+            float target = PullingOver && toEnd ? PullOverShift : 0;
+            shift = Mathf.MoveTowards(shift, target, dt);
+            var kerb = Vector3.Cross(Vector3.up, (PoliceChase.Centre(to) - PoliceChase.Centre(from)).normalized);
+            var goal = (toEnd ? LaneEnd(from, to) : LaneStart(from, to)) + kerb * applied;
             var pos = Body.position;
             var flat = goal - pos;
             flat.y = 0;
@@ -114,12 +123,15 @@ namespace PolicePursuit.Gameplay
             float cap = blockedFor > 4 ? 1.5f : Cruise;
             Speed = blocked ? Mathf.Max(0, Speed - Brake * dt) : Mathf.Min(cap, Speed + Accel * dt);
             // Fast enough to stop on the line, gently, no faster.
+            if (PullingOver) Speed = Mathf.Min(Speed, PullOverSpeed);
             if (stopForLight) Speed = Mathf.Min(Speed, Mathf.Sqrt(2 * Brake * 0.5f * Mathf.Max(0, flat.magnitude - 0.8f)));
             if (blockedFor > 4.5f + 1.5f) blockedFor = 0;
 
             var dir = flat.normalized;
             Body.MoveRotation(Quaternion.RotateTowards(Body.rotation, Quaternion.LookRotation(dir), 120 * dt));
-            Body.MovePosition(pos + transform.forward * Speed * dt);
+            // Sidestep straight towards (or back from) the kerb: steering at a point 40 m ahead would barely move it.
+            Body.MovePosition(pos + transform.forward * Speed * dt + kerb * (shift - applied));
+            applied = shift;
         }
 
         // A hard hit knocks the car loose: physics takes over and it stops driving until respawned.
@@ -139,6 +151,18 @@ namespace PolicePursuit.Gameplay
         public const float RespawnAfter = 8, RespawnAway = 40;
         public readonly List<CivilCar> Cars = new List<CivilCar>();
         public Transform Player { get; set; }
+        public VehicleController PoliceCar { get; set; }
+        public VehicleController PlayerSiren { get; set; } // the player's police car while its siren is on
+        public const float SirenHeard = 25, SirenFrom = 3; // only a police car on the move has its siren going
+        float nextSirenCheck;
+
+        // Behind or alongside (not already well past) and close: the siren tells a driver to make way.
+        public static bool ShouldPullOver(Transform car, Vector3 police, float range)
+        {
+            var back = police - car.position;
+            back.y = 0;
+            return back.magnitude < range && Vector3.Dot(back, car.forward) < 2;
+        }
         System.Random random = new System.Random(11);
 
         public void Init(int count)
@@ -172,8 +196,20 @@ namespace PolicePursuit.Gameplay
             car.gameObject.SetActive(false); // nowhere free: sit this one out
         }
 
+        public static bool Sounding(VehicleController c) =>
+            c != null && c.gameObject.activeInHierarchy && Mathf.Abs(c.Speed) > SirenFrom;
+
         void Update()
         {
+            if (Time.time >= nextSirenCheck)
+            {
+                nextSirenCheck = Time.time + 0.2f;
+                bool chaser = Sounding(PoliceCar), player = Sounding(PlayerSiren);
+                foreach (var car in Cars)
+                    car.PullingOver = !car.Crashed
+                        && ((chaser && ShouldPullOver(car.transform, PoliceCar.transform.position, SirenHeard))
+                            || (player && ShouldPullOver(car.transform, PlayerSiren.transform.position, SirenHeard)));
+            }
             foreach (var car in Cars)
             {
                 if (!car.gameObject.activeSelf || !car.Crashed || Time.time - car.CrashedAt < RespawnAfter) continue;

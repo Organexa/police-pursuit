@@ -23,21 +23,39 @@ namespace PolicePursuit.Gameplay
         WheelCollider[] wheels; // front left, front right, rear left, rear right
         float stuckTime;
 
-        // A police car gets a red and blue light bar as body children 2 and 3 (same layout as the endless cops).
+        // A police car gets a red and blue light bar on the roof.
         public static VehicleController Create(Transform parent, Vector3 pos, Color paint, bool police = false)
         {
             var go = new GameObject(police ? "Police" : "Vehicle");
             go.transform.SetParent(parent, false);
             go.transform.localPosition = pos;
             var body = Shapes.Car(go.transform, "Body", paint).transform;
-            if (police)
-            {
-                float roof = Models.Available ? 1.28f : 1.45f;
-                Shapes.Box(body, new Vector3(-0.4f, roof, -0.3f), new Vector3(0.6f, 0.2f, 0.4f), Shapes.Red, glow: 1);
-                Shapes.Box(body, new Vector3(0.4f, roof, -0.3f), new Vector3(0.6f, 0.2f, 0.4f), Color.blue, glow: 1.5f);
-            }
             Models.Dress(body, paint, Models.PlayerLod);
-            return go.AddComponent<VehicleController>();
+            var car = go.AddComponent<VehicleController>();
+            if (police) car.AddLightBar();
+            return car;
+        }
+
+        public bool HasLightBar => red != null;
+        public bool LightsShowing => HasLightBar && (red.activeSelf || blue.activeSelf);
+        GameObject red, blue;
+
+        public void AddLightBar()
+        {
+            if (HasLightBar) return;
+            var body = transform.GetChild(0);
+            float roof = Models.Available ? 1.28f : 1.45f;
+            red = Shapes.Box(body, new Vector3(-0.4f, roof, -0.3f), new Vector3(0.6f, 0.2f, 0.4f), Shapes.Red, glow: 1);
+            blue = Shapes.Box(body, new Vector3(0.4f, roof, -0.3f), new Vector3(0.6f, 0.2f, 0.4f), Color.blue, glow: 1.5f);
+        }
+
+        // Alternates red and blue while on; both dark while off.
+        public void Flash(bool on)
+        {
+            if (!HasLightBar) return;
+            bool redOn = Time.time % 0.4f < 0.2f;
+            red.SetActive(on && redOn);
+            blue.SetActive(on && !redOn);
         }
 
         void Awake()
