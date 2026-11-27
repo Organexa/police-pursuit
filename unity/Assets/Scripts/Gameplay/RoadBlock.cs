@@ -127,5 +127,6 @@ namespace PolicePursuit.Gameplay
         }
 
         public VehicleController this[int i] => cars[i];
+        public VehicleController[] Cars => cars;
     }
 }

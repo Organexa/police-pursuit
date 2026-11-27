@@ -154,6 +154,7 @@ namespace PolicePursuit.Gameplay
         public Transform Player { get; set; }
         public VehicleController PoliceCar { get; set; }
         public VehicleController PlayerSiren { get; set; } // the player's police car while its siren is on
+        public VehicleController[] MoreSirens { get; set; } = new VehicleController[0]; // e.g. roadblock cars
         public const float SirenHeard = 25, SirenFrom = 3; // only a police car on the move has its siren going
         float nextSirenCheck;
 
@@ -197,6 +198,15 @@ namespace PolicePursuit.Gameplay
             car.gameObject.SetActive(false); // nowhere free: sit this one out
         }
 
+        bool Heard(CivilCar car, VehicleController siren) =>
+            Sounding(siren) && ShouldPullOver(car.transform, siren.transform.position, SirenHeard);
+
+        bool HeardAny(CivilCar car)
+        {
+            foreach (var s in MoreSirens) if (Heard(car, s)) return true;
+            return false;
+        }
+
         public static bool Sounding(VehicleController c) =>
             c != null && c.gameObject.activeInHierarchy && Mathf.Abs(c.Speed) > SirenFrom;
 
@@ -205,11 +215,8 @@ namespace PolicePursuit.Gameplay
             if (Time.time >= nextSirenCheck)
             {
                 nextSirenCheck = Time.time + 0.2f;
-                bool chaser = Sounding(PoliceCar), player = Sounding(PlayerSiren);
                 foreach (var car in Cars)
-                    car.PullingOver = !car.Crashed
-                        && ((chaser && ShouldPullOver(car.transform, PoliceCar.transform.position, SirenHeard))
-                            || (player && ShouldPullOver(car.transform, PlayerSiren.transform.position, SirenHeard)));
+                    car.PullingOver = !car.Crashed && (Heard(car, PoliceCar) || Heard(car, PlayerSiren) || HeardAny(car));
             }
             foreach (var car in Cars)
             {

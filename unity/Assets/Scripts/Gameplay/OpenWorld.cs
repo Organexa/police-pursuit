@@ -126,6 +126,7 @@ namespace PolicePursuit.Gameplay
             Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
             Block.transform.SetParent(transform, false);
             Block.Init();
+            Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
             Lights.transform.SetParent(transform, false);
             Lights.Build();

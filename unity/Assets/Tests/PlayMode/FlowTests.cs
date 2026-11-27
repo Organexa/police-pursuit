@@ -1026,4 +1026,31 @@ public class FlowTests
         Assert.IsFalse(block.Chasing, "off when the chase is off");
     }
 
+    [UnityTest]
+    public IEnumerator TrafficPullsOverForRoadblockCarsOnTheMove()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = world.Car.transform;
+        var block = world.Block;
+        block.Spawn(new Vector2Int(2, 3), new Vector2Int(2, 4));
+        var rb = block[0];
+        var civ = world.Traffic.Cars[1];
+        civ.Place(new Vector2Int(4, 0), new Vector2Int(4, 1)); // away from the main chaser and the player
+        rb.Place(civ.transform.position - civ.transform.forward * 12 + Vector3.up * 0.6f, 0);
+        yield return new WaitForSeconds(0.5f);
+        Assert.IsFalse(civ.PullingOver, "a parked roadblock car is silent");
+
+        for (float t = 0; t < 1.5f; t += Time.deltaTime)
+        {
+            rb.Place(civ.transform.position - civ.transform.forward * 10 + Vector3.up * 0.6f, 0);
+            rb.Body.linearVelocity = Vector3.forward * 6;
+            yield return null;
+        }
+        Assert.IsTrue(civ.PullingOver, "makes way for a roadblock car on the move");
+    }
+
 }
