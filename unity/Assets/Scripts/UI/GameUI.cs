@@ -29,6 +29,17 @@ namespace PolicePursuit.UI
         readonly List<(string id, string name, Text label)> shopRows = new List<(string, string, Text)>();
         readonly Image[] stars = new Image[5];
         HoldButton left, right, drift;
+        GameObject roamHud;
+        HoldButton roamLeft, roamRight, gas, brake, handbrake;
+        Text speedText, bustText, doorText;
+        GameObject driveControls, footControls;
+        HoldButton sprint, jump, fire, block, arrest;
+        Text objectiveText, missionResultText;
+        GameObject missionIntro, missionResult;
+        Text ammoText;
+        GameObject crosshair;
+        TouchStick stick;
+        LookPad look;
         float popupUntil;
         GameState settingsFrom;
         Slider sound, music, tilt;
@@ -54,13 +65,19 @@ namespace PolicePursuit.UI
             safe.gameObject.AddComponent<SafeArea>();
 
             BuildHud(safe);
+            BuildRoamHud(safe);
             BuildScreens(safe);
+            BuildMission(safe);
         }
 
         public void Show(GameState state)
         {
             menu.SetActive(state == GameState.Menu);
             hud.SetActive(state == GameState.Run);
+            roamHud.SetActive(state == GameState.FreeRoam);
+            missionIntro.SetActive(false);
+            missionResult.SetActive(state == GameState.MissionResult);
+            if (state == GameState.MissionResult) ShowMissionResult();
             pause.SetActive(state == GameState.Pause);
             busted.SetActive(state == GameState.Busted);
             results.SetActive(state == GameState.Results);
@@ -116,6 +133,7 @@ namespace PolicePursuit.UI
             continueButton.SetActive(game.State == GameState.Busted && game.ContinueLeft > 0);
             continueText.text = $"Continue (watch ad) {Mathf.CeilToInt(game.ContinueLeft)}";
             doubleButton.SetActive(game.CanDouble);
+            if (game.State == GameState.FreeRoam) { TickRoam(); return; }
             if (game.State != GameState.Run) return;
             UpdateTutorial();
 
@@ -172,6 +190,150 @@ namespace PolicePursuit.UI
                 game.FinishTutorial).transform.parent.gameObject;
         }
 
+        // Driving controls for the open world; only shown in that mode.
+        // Open-world controls; only the set for driving or for walking is shown.
+        void BuildRoamHud(RectTransform safe)
+        {
+            roamHud = Panel(safe, "RoamHud", Color.clear);
+            var root = roamHud.transform;
+            var bottomRight = new Vector2(1, 0);
+
+            driveControls = Panel(root, "Drive", Color.clear);
+            var drive = driveControls.transform;
+            roamLeft = Hold(drive, "<", Vector2.zero, new Vector2(16, 16), new Vector2(96, 96));
+            roamRight = Hold(drive, ">", Vector2.zero, new Vector2(128, 16), new Vector2(96, 96));
+            gas = Hold(drive, "GAS", bottomRight, new Vector2(-16, 16), new Vector2(100, 120));
+            brake = Hold(drive, "BRAKE", bottomRight, new Vector2(-128, 16), new Vector2(100, 96));
+            handbrake = Hold(drive, "HAND", bottomRight, new Vector2(-128, 124), new Vector2(100, 56));
+
+            footControls = Panel(root, "Foot", Color.clear);
+            footControls.AddComponent<Image>().color = Color.clear; // catches camera drags behind the buttons
+            look = footControls.AddComponent<LookPad>();
+            var foot = footControls.transform;
+            var pad = Box(foot, "Stick", Vector2.zero, new Vector2(24, 24), new Vector2(150, 150), new Color(1, 1, 1, 0.12f));
+            stick = pad.gameObject.AddComponent<TouchStick>();
+            stick.Knob = Box(pad.transform, "Knob", Middle, Vector2.zero, new Vector2(60, 60), Gameplay.Shapes.Cyan).rectTransform;
+            stick.Knob.GetComponent<Image>().raycastTarget = false;
+            sprint = Hold(foot, "SPRINT", bottomRight, new Vector2(-16, 16), new Vector2(110, 96));
+            jump = Hold(foot, "JUMP", bottomRight, new Vector2(-138, 16), new Vector2(96, 72));
+            fire = Hold(foot, "FIRE", bottomRight, new Vector2(-16, 124), new Vector2(110, 96));
+            MakeButton(foot, "RELOAD", bottomRight, new Vector2(-138, 100), new Vector2(96, 48), () => game.World.Gun.Reload());
+            ammoText = Label(foot, bottomRight, new Vector2(-16, 230), new Vector2(200, 28), 18, TextAnchor.MiddleRight);
+            ammoText.raycastTarget = false;
+            MakeButton(foot, "PUNCH", bottomRight, new Vector2(-246, 16), new Vector2(96, 72), () => game.World.Melee.LightAttack());
+            MakeButton(foot, "KICK", bottomRight, new Vector2(-246, 96), new Vector2(96, 56), () => game.World.Melee.HeavyAttack());
+            block = Hold(foot, "BLOCK", bottomRight, new Vector2(-354, 16), new Vector2(96, 72));
+            MakeButton(foot, "DODGE", bottomRight, new Vector2(-138, 156), new Vector2(96, 48), Dodge);
+            arrest = Hold(foot, "ARREST", Middle, new Vector2(0, -40), new Vector2(160, 56));
+            crosshair = Box(foot, "Crosshair", Middle, new Vector2(0, 40), new Vector2(8, 8), Color.white).gameObject;
+            crosshair.GetComponent<Image>().raycastTarget = false;
+
+            // After the control sets, so their drag area never covers these.
+            speedText = Label(root, new Vector2(0, 1), new Vector2(16, -16), new Vector2(460, 32), 22, TextAnchor.MiddleLeft);
+            bustText = Label(root, Middle, new Vector2(0, 80), new Vector2(400, 40), 28, TextAnchor.MiddleCenter);
+            bustText.color = Gameplay.Shapes.Red;
+            bustText.raycastTarget = false;
+            objectiveText = Label(root, new Vector2(0.5f, 1), new Vector2(0, -56), new Vector2(420, 28), 18, TextAnchor.MiddleCenter);
+            objectiveText.color = Gameplay.Shapes.Cyan;
+            objectiveText.raycastTarget = false;
+            MakeButton(root, "Menu", Vector2.one, new Vector2(-16, -16), new Vector2(96, 48), game.ToMenu);
+            MakeButton(root, "Restart", Vector2.one, new Vector2(-120, -16), new Vector2(96, 48), () => game.World.Restart());
+            doorText = MakeButton(root, "EXIT", bottomRight, new Vector2(-16, 270), new Vector2(110, 56), ToggleDoor);
+        }
+
+        // Intro and side choice, then the result screen with Retry.
+        void BuildMission(RectTransform safe)
+        {
+            missionIntro = Panel(safe, "Mission intro", Gameplay.Shapes.Dark);
+            Title(missionIntro, "MIDNIGHT PRISON BREAK", 150);
+            var intro = Label(missionIntro.transform, Middle, new Vector2(0, 75), new Vector2(620, 70), 18, TextAnchor.MiddleCenter);
+            intro.text = Gameplay.Mission.Intro + "\nWhich side are you on?";
+            MakeButton(missionIntro.transform, "Play as Police", Middle, new Vector2(-115, 0), Button,
+                () => game.StartMission(Gameplay.Mission.Role.Police));
+            MakeButton(missionIntro.transform, "Play as Prisoner", Middle, new Vector2(115, 0), Button,
+                () => game.StartMission(Gameplay.Mission.Role.Prisoner));
+            MakeButton(missionIntro.transform, "Free roam", Middle, new Vector2(-115, -64), Button, game.StartFreeRoam);
+            MakeButton(missionIntro.transform, "Back", Middle, new Vector2(115, -64), Button, () => missionIntro.SetActive(false));
+
+            missionResult = Panel(safe, "Mission result", new Color(0.04f, 0.055f, 0.1f, 0.85f));
+            missionResultText = Label(missionResult.transform, Middle, new Vector2(0, 70), new Vector2(620, 160), 22, TextAnchor.MiddleCenter);
+            MakeButton(missionResult.transform, "Retry", Middle, new Vector2(-115, -64), Button,
+                () => game.StartMission(game.World.Mission.Side));
+            MakeButton(missionResult.transform, "Menu", Middle, new Vector2(115, -64), Button, game.ToMenu);
+        }
+
+        void ShowMissionResult()
+        {
+            var m = game.World.Mission;
+            missionResultText.text = (m.Won ? "MISSION COMPLETE" : "MISSION FAILED") + "\n" + Gameplay.Mission.Describe(m.Result) +
+                $"\nTime {Mathf.FloorToInt(m.Elapsed / 60)}:{Mathf.FloorToInt(m.Elapsed % 60):00}" +
+                (game.LastReward > 0 ? $"\nReward {game.LastReward} coins" : "");
+        }
+
+        void Dodge()
+        {
+            var w = game.World;
+            var move = w.Walker.Move;
+            w.Melee.Dodge(Quaternion.Euler(0, w.LookYaw, 0) * new Vector3(move.x, 0, move.y));
+        }
+
+        void ToggleDoor()
+        {
+            var world = game.World;
+            if (world.OnFoot) world.EnterCar();
+            else world.ExitCar();
+        }
+
+        void TickRoam()
+        {
+            var world = game.World;
+            var car = world.Car;
+            if (Gameplay.KeyInput.Interact()) ToggleDoor();
+            bool onFoot = world.OnFoot;
+            driveControls.SetActive(!onFoot);
+            footControls.SetActive(onFoot);
+            doorText.text = onFoot ? "ENTER" : "EXIT";
+            doorText.transform.parent.gameObject.SetActive(onFoot ? world.CanEnter : world.CanExit);
+
+            if (onFoot)
+            {
+                var walker = world.Walker;
+                var keys = new Vector2(Gameplay.KeyInput.Steer(), Gameplay.KeyInput.Pedal());
+                walker.Move = Vector2.ClampMagnitude(stick.Value + keys, 1);
+                walker.Sprint = sprint.Held || Gameplay.KeyInput.Sprint();
+                if (jump.Held || Gameplay.KeyInput.JumpPressed()) walker.Jump = true;
+                world.LookYaw += look.Yaw;
+                look.Yaw = 0;
+                if (fire.Held || Gameplay.KeyInput.FireHeld()) world.Shoot();
+                if (Gameplay.KeyInput.ReloadPressed()) world.Gun.Reload();
+                world.Melee.SetBlock(block.Held || Gameplay.KeyInput.BlockHeld());
+                arrest.gameObject.SetActive(world.CanArrest || world.ArrestProgress > 0);
+                world.ArrestHeld = arrest.Held || Gameplay.KeyInput.ArrestHeld();
+                if (Gameplay.KeyInput.PunchPressed()) world.Melee.LightAttack();
+                if (Gameplay.KeyInput.KickPressed()) world.Melee.HeavyAttack();
+                if (Gameplay.KeyInput.DodgePressed()) Dodge();
+                ammoText.text = world.Gun.Reloading ? "Reloading..." : $"{world.Gun.Data.displayName}  {world.Gun.Ammo}/{world.Gun.Data.magazine}";
+                speedText.text = $"Health {Mathf.CeilToInt(world.PlayerHealth.Current)}  Stamina {Mathf.FloorToInt(world.Melee.Stamina)}    Police {Mathf.RoundToInt(world.PoliceDistance)} m";
+            }
+            else
+            {
+                float steer = (roamRight.Held ? 1 : 0) - (roamLeft.Held ? 1 : 0) + Gameplay.KeyInput.Steer();
+                float pedal = (gas.Held ? 1 : 0) - (brake.Held ? 1 : 0) + Gameplay.KeyInput.Pedal();
+                car.Steer = Mathf.Clamp(steer, -1, 1);
+                car.Pedal = Mathf.Clamp(pedal, -1, 1);
+                car.Handbrake = handbrake.Held || Gameplay.KeyInput.Drift();
+                speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h    Police {Mathf.RoundToInt(world.PoliceDistance)} m";
+            }
+            var m = world.Mission;
+            objectiveText.text = m == null ? world.Objective
+                : $"{world.Objective}   {Mathf.CeilToInt(Mathf.Max(0, Gameplay.Mission.TimeLimit - m.Elapsed))} s";
+            if (m != null && m.Elapsed < m.MessageUntil) { bustText.text = m.Message; return; }
+            bustText.text = world.ArrestProgress > 0 ? $"HANDCUFFING {Mathf.RoundToInt(world.ArrestProgress * 100)}%"
+                : world.BustProgress > 0 ? $"PULLING YOU OVER {Mathf.RoundToInt(world.BustProgress * 100)}%"
+                : world.Deliveries > 0 ? $"Suspects delivered {world.Deliveries}"
+                : world.Busts > 0 ? $"Busted {world.Busts}x" : "";
+        }
+
         void UpdateTutorial()
         {
             int step = game.TutorialStep;
@@ -188,7 +350,8 @@ namespace PolicePursuit.UI
             menu = Panel(safe, "Menu", dim);
             Title(menu, "POLICE PURSUIT", 150);
             menuText = Label(menu.transform, Middle, new Vector2(0, 90), new Vector2(500, 28), 18, TextAnchor.MiddleCenter);
-            Choice(menu, "Play", 30, game.StartRun);
+            MakeButton(menu.transform, "Endless Run", Middle, new Vector2(-115, 30), Button, game.StartRun);
+            MakeButton(menu.transform, "Prison Break", Middle, new Vector2(115, 30), Button, () => missionIntro.SetActive(true));
             MakeButton(menu.transform, "Garage", Middle, new Vector2(-115, -34), Button, OpenGarage);
             MakeButton(menu.transform, "Leaderboard", Middle, new Vector2(115, -34), Button, OpenBoard);
             if (Shop.Configured)

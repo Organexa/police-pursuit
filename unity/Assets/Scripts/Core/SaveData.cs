@@ -25,6 +25,7 @@ namespace PolicePursuit.Core
         public int runsSinceAd;
         public bool adsRemoved; // set by the "Remove ads" purchase (F10)
         public List<string> delivered = new List<string>(); // coin-pack transactions already added
+        public List<string> missionsWon = new List<string>(); // mission id + "_" + side, e.g. midnight_prison_break_police
 
         public bool Owns(Car car) => car == CarList.All[0] || unlockedCars.Contains(car.Id);
 
@@ -44,13 +45,16 @@ namespace PolicePursuit.Core
             return true;
         }
 
-        // Cloud save rules: coins = max, best = max, cars = union, everything else stays local.
+        // Cloud save rules: coins = max, best = max, cars and won missions = union, everything else stays local.
         // shortcut: max can give back coins spent while offline; that only affects the player's own game (TRD §5).
         public void Merge(SaveData cloud)
         {
             if (cloud == null) return;
             coins = Math.Max(coins, cloud.coins);
             bestScore = Math.Max(bestScore, cloud.bestScore);
+            if (cloud.missionsWon != null)
+                foreach (var id in cloud.missionsWon)
+                    if (!missionsWon.Contains(id)) missionsWon.Add(id);
             if (cloud.unlockedCars == null) return;
             foreach (var id in cloud.unlockedCars)
                 if (!unlockedCars.Contains(id)) unlockedCars.Add(id);

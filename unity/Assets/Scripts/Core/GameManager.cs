@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PolicePursuit.Core
 {
-    public enum GameState { Menu, Run, Pause, Busted, Results }
+    public enum GameState { Menu, Run, Pause, Busted, Results, FreeRoam, MissionResult }
 
     public class GameManager : MonoBehaviour
     {
@@ -25,6 +25,7 @@ namespace PolicePursuit.Core
         public CloudSave Cloud { get; private set; }
         public Shop Shop { get; private set; }
         public Sound Sound { get; private set; }
+        public OpenWorld World { get; private set; } // built on first entry
         public IAds Ads { get; set; } // tests swap in a fake
         public float ContinueLeft { get; private set; } // seconds the "Continue" offer stays up
         public bool CanDouble => State == GameState.Results && !doubled && Stats.Coins > 0 && Ads.RewardedReady;
@@ -123,6 +124,11 @@ namespace PolicePursuit.Core
 
         void Update()
         {
+            if (State == GameState.FreeRoam || State == GameState.MissionResult)
+            {
+                if (KeyInput.BackPressed()) ToMenu();
+                return;
+            }
             if (KeyInput.BackPressed()) TogglePause();
             if (State != GameState.Run) return;
 
@@ -204,11 +210,59 @@ namespace PolicePursuit.Core
             SetState(GameState.Run);
         }
 
+        // Open-world mode: hides the endless road and shows the district. No score, coins or wanted level yet.
+        public void StartFreeRoam() => EnterWorld(null);
+        public void StartMission(Mission.Role side) => EnterWorld(side);
+        public int LastReward { get; private set; }
+
+        void EnterWorld(Mission.Role? side)
+        {
+            StopAllCoroutines();
+            SetFrozen(false);
+            ShowEndless(false);
+            if (World == null)
+            {
+                World = Child<OpenWorld>("OpenWorld");
+                World.MissionEnded += EndMission;
+            }
+            World.gameObject.SetActive(true);
+            World.Begin(side);
+            SetState(GameState.FreeRoam);
+        }
+
+        // Freezes the world behind the result screen and saves the progress: a win pays coins and is remembered.
+        void EndMission(Mission m)
+        {
+            LastReward = 0;
+            if (m.Won)
+            {
+                var save = SaveData.Load(SaveData.DefaultPath);
+                LastReward = Mission.Reward;
+                save.coins += LastReward;
+                string id = Mission.Id + "_" + m.Side.ToString().ToLowerInvariant();
+                if (!save.missionsWon.Contains(id)) save.missionsWon.Add(id);
+                save.Save(SaveData.DefaultPath);
+                Cloud.MarkDirty();
+            }
+            SetFrozen(true);
+            SetState(GameState.MissionResult);
+        }
+
+        void ShowEndless(bool on)
+        {
+            Player.gameObject.SetActive(on);
+            road.gameObject.SetActive(on);
+            Traffic.gameObject.SetActive(on);
+            coins.gameObject.SetActive(on);
+        }
+
         public void ToMenu()
         {
             // Quitting a run from pause keeps no score and no coins.
             StopAllCoroutines();
             SetFrozen(false);
+            if (World != null) World.gameObject.SetActive(false);
+            ShowEndless(true);
             ApplySelectedCar();
             road.ResetRoad();
             Traffic.ResetTraffic();

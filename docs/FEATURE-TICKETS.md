@@ -196,3 +196,17 @@ _Code done 2026-11-26. Open: Supabase setup, database tests and each action once
   - you can send a push (title ≤ 60, body ≤ 200);
   - no secret key is in the site's code (only the anon key).
 - **Tests:** RLS: non-admin and `aal1` admin are refused. Manual: each action once.
+
+---
+
+## OW — Open-world mode ("Midnight Prison Break" slice)
+_Added 2026-11-27 at your request: a second mode next to the endless run, which stays as it is. Steps run one at a time, each tested before the next._
+
+- OW1 ◐ Physics car and test district (menu "Open World" button; Rigidbody + WheelColliders; gas, brake/reverse, handbrake, steering that tightens with speed; roll-over recovery; chase camera with speed FOV; walled 4×4 box district; Back or Menu returns). **Tests:** PlayMode drive/brake/return.
+- OW2 ◐ Police AI car that chases you: straight at you in sight, else crossroads to crossroads; 90% of your top speed; brakes for corners; backs out when stuck; busted after 2 s within 7 m while slower than 3 m/s. **Tests:** EditMode grid route, PlayMode catch a parked car.
+- OW3 ◐ Leave the car and walk: EXIT under 3 m/s (driver side, other side, or behind, whichever is free), ENTER within 4 m; capsule figure; joystick, sprint, jump, drag to turn the camera; camera stays out of walls; police chase you on foot. **Tests:** PlayMode exit, walk, enter.
+- OW4 ◐ Ranged combat: `IDamageable` + `Health`, `WeaponData` ScriptableObject (fictional Pulse Pistol and Scrap Blaster), instant hit with 15° aim assist, magazine and reload, flash and spark only; one armed suspect that is incapacitated (lies down, goes grey); player incapacitated = start over. **Tests:** EditMode health, PlayMode shoot, reload, get shot at.
+- OW5 ◐ Melee combat: PUNCH (light) and KICK (heavy) with wind-up, hit window and recovery; three-light combo (third ×1.5); lock-on to the nearest target in 2.5 m; BLOCK takes 20% and costs stamina; DODGE is untouchable for 0.25 s; stamina regenerates; no walking or shooting mid-strike. Suspect brawls within 2.2 m (guards 35% of strikes, strikes every 1.4 s). Difficulty settings not yet. **Tests:** PlayMode combo, spam refusal, block, dodge.
+- OW6 ◐ Surrender and arrest: suspect gives up at 35% health (hands up, can no longer be hurt); hold ARREST 2 s within 2 m of a surrendered or incapacitated suspect (letting go restarts); cuffed suspect follows you, rides along when you get in within 6 m; stop on the blue station pad to deliver; objective line on the HUD. **Tests:** PlayMode surrender, cuff, escort, load, deliver.
+- OW7 ◐ Midnight Prison Break: menu "Prison Break" → text intro → Police, Prisoner or Free roam. Police: chase the fleeing car (80% of your top speed, picks the road away from you); stay within 25 m for 4 s (or 90 s pass) and the escapee bails out armed; shots, then fists, surrender, cuff, deliver. Prisoner: police chase you; the car dies at the green garage; run past the blue guard to the green safehouse. 5-minute limit; busted, incapacitated or time up fails. Result screen with Retry; a win pays 500 coins and is saved in `missionsWon` (cloud merge: union). Not yet: civilian traffic, cutscenes, dialogue, music. **Tests:** EditMode merge and flee choice; PlayMode police win, prisoner win, prisoner fail.
+- **Open questions:** character art and animations (you choose and buy a pack; placeholders until then); open-world scores do not go to the leaderboard until the server has a rule for them.

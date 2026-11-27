@@ -332,4 +332,65 @@ public class CoreTests
             Assert.IsFalse(AuthSession.IsRejected(0) || AuthSession.IsRejected(429) || AuthSession.IsRejected(500));
             Assert.AreEqual("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Auth.HashNonce("abc"));
         }
+
+    [Test]
+    public void PoliceRouteFollowsTheRoadGrid()
+    {
+        Assert.AreEqual(new Vector2Int(2, 2), PoliceChase.Node(Vector3.zero));
+        Assert.AreEqual(new Vector2Int(0, 4), PoliceChase.Node(new Vector3(-500, 0, 500))); // clamped to the grid
+        Assert.AreEqual(Vector3.zero, PoliceChase.Centre(new Vector2Int(2, 2)));
+        // Larger gap first, one crossroads at a time, never diagonal.
+        Assert.AreEqual(new Vector2Int(1, 0), PoliceChase.Step(new Vector2Int(0, 0), new Vector2Int(3, 1)));
+        Assert.AreEqual(new Vector2Int(0, 1), PoliceChase.Step(new Vector2Int(0, 0), new Vector2Int(1, 3)));
+        Assert.AreEqual(new Vector2Int(2, 2), PoliceChase.Step(new Vector2Int(2, 2), new Vector2Int(2, 2)));
+        var at = new Vector2Int(0, 0);
+        for (int i = 0; i < 8; i++) at = PoliceChase.Step(at, new Vector2Int(4, 4));
+        Assert.AreEqual(new Vector2Int(4, 4), at);
+    }
+
+    [Test]
+    public void HealthGoesDownOnceAndRestores()
+    {
+        var go = new GameObject("health test");
+        try
+        {
+            var h = go.AddComponent<Health>();
+            int downs = 0;
+            h.Downed += () => downs++;
+            h.TakeDamage(-5);
+            Assert.AreEqual(100, h.Current, "negative damage heals nothing");
+            h.TakeDamage(60);
+            Assert.AreEqual(40, h.Current);
+            h.TakeDamage(60);
+            h.TakeDamage(60);
+            Assert.AreEqual(0, h.Current);
+            Assert.IsTrue(h.Down);
+            Assert.AreEqual(1, downs);
+            h.Restore();
+            Assert.IsFalse(h.Down);
+            var gun = WeaponData.PlayerPistol();
+            Assert.Greater(gun.magazine, 0);
+            Assert.That(WeaponData.SuspectPistol().damage, Is.LessThan(gun.damage), "suspects hit softer than the player");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+
+    [Test]
+    public void MissionsWonMergeAndFleeingPicksTheFarRoad()
+    {
+        var local = new SaveData();
+        local.missionsWon.Add("a");
+        var cloud = new SaveData();
+        cloud.missionsWon.AddRange(new[] { "a", "b" });
+        local.Merge(cloud);
+        CollectionAssert.AreEquivalent(new[] { "a", "b" }, local.missionsWon);
+        local.Merge(new SaveData { missionsWon = null });
+        Assert.AreEqual(2, local.missionsWon.Count);
+
+        // Pursuer to the south: run north, never straight back the way it came.
+        var pursuer = PoliceChase.Centre(new Vector2Int(2, 0));
+        Assert.AreEqual(new Vector2Int(2, 3), FleeDriver.Choose(new Vector2Int(2, 2), new Vector2Int(2, 1), pursuer));
+        Assert.AreNotEqual(new Vector2Int(2, 3), FleeDriver.Choose(new Vector2Int(2, 4), new Vector2Int(2, 3), pursuer));
+        Assert.AreNotEqual(new Vector2Int(2, 5), FleeDriver.Choose(new Vector2Int(2, 4), new Vector2Int(2, 3), pursuer), "stays on the grid");
+    }
 }
