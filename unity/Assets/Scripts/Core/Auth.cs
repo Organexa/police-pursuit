@@ -187,7 +187,7 @@ namespace PolicePursuit.Core
         void OnGoogle()
         {
             if (!string.IsNullOrEmpty(error)) { Fail(error); return; }
-            if (string.IsNullOrEmpty(idToken)) { Busy = false; return; } // no token, no error: stay a guest
+            if (string.IsNullOrEmpty(idToken)) { Busy = false; return; } // cancelled: stay a guest
             var request = Request("POST", "/auth/v1/token?grant_type=id_token",
                 JsonUtility.ToJson(new IdTokenBody { id_token = idToken, nonce = nonce }));
             idToken = null;

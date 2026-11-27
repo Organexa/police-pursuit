@@ -407,7 +407,17 @@ namespace PolicePursuit.UI
             Leaderboard.FetchTop(text => boardText.text = text);
             if (!game.Auth.SignedIn) { rankText.text = "Sign in to join"; return; }
             rankText.text = "";
-            Leaderboard.FetchRank(game.Auth.Session, text => rankText.text = text);
+            StartCoroutine(ShowRank());
+        }
+
+        // Auth renews an expired sign-in by itself; asking for the rank before that is refused (401).
+        System.Collections.IEnumerator ShowRank()
+        {
+            float giveUp = Time.unscaledTime + 10;
+            while (game.Auth.SignedIn && Time.unscaledTime < giveUp
+                && game.Auth.Session.NeedsRefresh(System.DateTimeOffset.UtcNow.ToUnixTimeSeconds()))
+                yield return null;
+            if (game.Auth.SignedIn) Leaderboard.FetchRank(game.Auth.Session, text => rankText.text = text);
         }
 
         void BuildGarage(RectTransform safe)
