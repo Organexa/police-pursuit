@@ -26,6 +26,16 @@ namespace PolicePursuit.Gameplay
             return mine < GreenFor ? Light.Green : mine < GreenFor + AmberFor ? Light.Amber : Light.Red;
         }
 
+        // Seconds of red left for cars arriving from `from` (0 when it is not red).
+        public static float RedLeft(Vector2Int node, Vector2Int from, float time)
+        {
+            if (For(node, from, time) != Light.Red) return 0;
+            bool northSouth = from.x == node.x;
+            float t = ((time + Offset(node)) % Cycle + Cycle) % Cycle;
+            float mine = northSouth ? t : (t + GreenFor + AmberFor) % Cycle;
+            return Cycle - mine;
+        }
+
         // Stop for red; for amber too unless already too close to stop comfortably.
         public static bool MustStop(Light light, float toLine) => light == Light.Red || (light == Light.Amber && toLine > 4);
 

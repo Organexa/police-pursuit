@@ -397,9 +397,10 @@ public class CoreTests
     [Test]
     public void CivilCarsKeepRightAndTurnOnTheGrid()
     {
-        // Northbound from the centre: lane 3.5 m to the right (east), clear of both crossroads.
-        Assert.AreEqual(new Vector3(3.5f, 0, 8), CivilCar.LaneStart(new Vector2Int(2, 2), new Vector2Int(2, 3)));
-        Assert.AreEqual(new Vector3(3.5f, 0, 46), CivilCar.LaneEnd(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        // Northbound from the centre: lane 3.5 m to the right (east), clear of both crossroads and their crossings.
+        Assert.AreEqual(new Vector3(3.5f, 0, CivilCar.NodeClear), CivilCar.LaneStart(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        Assert.AreEqual(new Vector3(3.5f, 0, OpenWorld.Pitch - CivilCar.NodeClear), CivilCar.LaneEnd(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        Assert.Greater(CivilCar.NodeClear - 2, OpenWorld.Pitch / 2 - Pedestrian.WalkHalf + 0.3f, "a car at the line stops short of the crossing");
         // Southbound on the same road uses the other lane.
         Assert.AreEqual(-3.5f, CivilCar.LaneStart(new Vector2Int(2, 3), new Vector2Int(2, 2)).x, 1e-4f);
         var random = new System.Random(1);
@@ -452,5 +453,19 @@ public class CoreTests
         Assert.IsTrue(TrafficLights.MustStop(TrafficLights.Light.Amber, 20));
         Assert.IsFalse(TrafficLights.MustStop(TrafficLights.Light.Amber, 2), "too close to stop: carry on");
         Assert.IsFalse(TrafficLights.MustStop(TrafficLights.Light.Green, 1));
+    }
+
+    [Test]
+    public void CrossingFitsInsideARed()
+    {
+        var node = new Vector2Int(0, 0);
+        Assert.AreEqual(9, TrafficLights.RedLeft(node, new Vector2Int(0, 1), 11), 1e-3f);
+        Assert.AreEqual(0, TrafficLights.RedLeft(node, new Vector2Int(0, 1), 1), "not red: nothing left");
+        Assert.Less(Pedestrian.CrossTime + 1, TrafficLights.Cycle / 2, "a fresh red is long enough to get over");
+        float half = Pedestrian.WalkHalf;
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(1, 1, half)), new Vector3(half, 0, half));
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(-1, 1, half)), new Vector3(-half, 0, half));
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(1, -1, half)), new Vector3(half, 0, -half));
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(-1, -1, half)), new Vector3(-half, 0, -half));
     }
 }

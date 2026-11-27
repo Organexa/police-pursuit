@@ -9,7 +9,7 @@ namespace PolicePursuit.Gameplay
     // shortcut: no give-way rules inside a crossroads; turning cars just cut across.
     public class CivilCar : MonoBehaviour
     {
-        public const float Lane = 3.5f, NodeClear = 8, Cruise = 9, Brake = 15, Accel = 4, LookAhead = 10, CrashSpeed = 5;
+        public const float Lane = 3.5f, NodeClear = 9, Cruise = 9, Brake = 15, Accel = 4, LookAhead = 10, CrashSpeed = 5;
 
         public Rigidbody Body { get; private set; }
         public float Speed { get; private set; }

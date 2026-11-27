@@ -26,6 +26,7 @@ public class FlowTests
         else File.WriteAllText(SaveData.DefaultPath, save);
         if (queue == null) File.Delete(ScoreQueue.DefaultPath);
         else File.WriteAllText(ScoreQueue.DefaultPath, queue);
+        PolicePursuit.Gameplay.Pedestrian.CrossChance = 0.5f;
         GameManager.Instance.ToMenu();
     }
 
@@ -352,7 +353,8 @@ public class FlowTests
         Assert.AreEqual(magazine, world.Gun.Ammo);
 
         world.Suspect.ResetSuspect();
-        for (float t = 0; t < 6 && world.PlayerHealth.Current == world.PlayerHealth.Max; t += Time.deltaTime)
+        // 50% hit chance and other systems also draw random numbers: allow a long run of misses.
+        for (float t = 0; t < 12 && world.PlayerHealth.Current == world.PlayerHealth.Max; t += Time.deltaTime)
             yield return null;
         Assert.Less(world.PlayerHealth.Current, world.PlayerHealth.Max, "the suspect fires back");
 
@@ -613,10 +615,10 @@ public class FlowTests
         for (int i = 0; i < people.Count; i++)
         {
             var p = people[i];
-            Assert.Greater(Vector3.Distance(p.transform.position, starts[i]), 1, "walks");
+            if (!p.WaitingToCross) Assert.Greater(Vector3.Distance(p.transform.position, starts[i]), 1, "walks (unless waiting at a corner)");
             var off = p.transform.position - p.Block;
             float ring = Mathf.Max(Mathf.Abs(off.x), Mathf.Abs(off.z));
-            Assert.AreEqual(half, ring, 0.8f, "stays on the pavement");
+            if (!p.Crossing) Assert.AreEqual(half, ring, 0.8f, "stays on the pavement (or is on a crossing)");
         }
 
         // Shots pass through them and they are never a target.
@@ -676,5 +678,39 @@ public class FlowTests
         }
         Time.timeScale = 1;
         Assert.IsTrue(moved, "and goes on green");
+    }
+
+    [UnityTest]
+    public IEnumerator OpenWorldPedestriansCrossOnRed()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        PolicePursuit.Gameplay.Pedestrian.CrossChance = 1;
+        Time.timeScale = 4;
+        PolicePursuit.Gameplay.Pedestrian crossed = null;
+        bool seenVisible = false;
+        var before = world.People.People.ConvertAll(p => p.Crossings); // people carry over from earlier tests
+        for (float t = 0; t < 120 && crossed == null; t += Time.deltaTime)
+        {
+            for (int i = 0; i < world.People.People.Count; i++)
+            {
+                var p = world.People.People[i];
+                if (p.Crossing && p.gameObject.layer == 0) seenVisible = true;
+                if (p.Crossings > before[i]) { crossed = p; break; }
+            }
+            yield return null;
+        }
+        Time.timeScale = 1;
+        Assert.IsNotNull(crossed, "someone crossed");
+        Assert.IsTrue(seenVisible, "cars can see people while they cross");
+        Assert.AreEqual(PolicePursuit.Gameplay.TrafficLights.Light.Red, crossed.LightAtStart, "only on red for the road crossed");
+        Assert.GreaterOrEqual(crossed.RedLeftAtStart, PolicePursuit.Gameplay.Pedestrian.CrossTime + 1, "with time to get over");
+        Assert.AreEqual(2, crossed.gameObject.layer, "back on the pavement, out of the way of shots again");
+        var off = crossed.transform.position - crossed.Block;
+        Assert.AreEqual(PolicePursuit.Gameplay.Pedestrian.WalkHalf, Mathf.Max(Mathf.Abs(off.x), Mathf.Abs(off.z)), 0.8f, "on the next block's pavement");
     }
 }
