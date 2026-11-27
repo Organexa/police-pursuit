@@ -60,7 +60,7 @@ namespace PolicePursuit.Gameplay
         public bool CanExit => !OnFoot && Mathf.Abs(Car.Speed) < ExitSpeed;
         public bool CanEnter => OnFoot && !CarLocked && Vector3.Distance(Walker.transform.position, Car.transform.position) < EnterRange;
         public float LookYaw { get; set; } // camera turn on foot, degrees
-        public float PoliceDistance => Vector3.Distance(Player.position, Police.transform.position);
+        public float PoliceDistance => Mathf.Min(Vector3.Distance(Player.position, Police.transform.position), Block.ChaserDistance(Player.position));
         public float BustProgress => bustTime / BustTime; // 0..1 while the police are pulling you over
         public int Busts { get; private set; }
         float bustTime;
@@ -300,7 +300,7 @@ namespace PolicePursuit.Gameplay
             People.PlayerSiren = SirenOn;
             Fleer.Scared = SirenOn && Vector3.Distance(Car.transform.position, Fleer.transform.position) < FleeDriver.SpookRange;
             if (Mission != null && Mission.Result != Mission.Outcome.None) return;
-            bool held = Police.gameObject.activeSelf && PoliceDistance < BustRange && PlayerSpeed < BustSpeed;
+            bool held = (Police.gameObject.activeSelf || Block.Chasing) && PoliceDistance < BustRange && PlayerSpeed < BustSpeed;
             bustTime = held ? bustTime + Time.deltaTime : 0;
             if (bustTime < BustTime) return;
             Busts++;

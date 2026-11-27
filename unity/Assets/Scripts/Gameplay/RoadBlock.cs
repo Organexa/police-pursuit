@@ -4,6 +4,7 @@ namespace PolicePursuit.Gameplay
 {
     // Two parked police cars angled across the road beyond the next crossroads in the player's path.
     // Always beatable: they leave a gap wide enough for a car on one side, and there is a turning before them.
+    // Get through and both join the chase, driven like the main police car, until the chase is off.
     public class RoadBlock : MonoBehaviour
     {
         public const float FirstAfter = 20, Every = 45, MinSpeed = 8, Lasts = 25, ClearBehind = 60;
@@ -11,10 +12,13 @@ namespace PolicePursuit.Gameplay
         public const float Angle = 60; // degrees off the road's direction
 
         public bool Active => cars[0].gameObject.activeSelf;
+        public bool Chasing { get; private set; }
+        public const float JoinPast = 3; // metres beyond the line of cars
         public Vector2Int From { get; private set; }
         public Vector2Int To { get; private set; }
         public Vector3 Centre { get; private set; }
         readonly VehicleController[] cars = new VehicleController[2];
+        readonly PoliceChase[] chasers = new PoliceChase[2];
         float sinceStart, nextAt = FirstAfter, upSince;
 
         public void Init()
@@ -23,6 +27,7 @@ namespace PolicePursuit.Gameplay
             {
                 cars[i] = VehicleController.Create(transform, Vector3.zero, Color.white, police: true);
                 cars[i].name = "Roadblock car";
+                chasers[i] = cars[i].gameObject.AddComponent<PoliceChase>(); // no target: sits still with lights on
                 cars[i].gameObject.SetActive(false);
             }
         }
@@ -47,7 +52,7 @@ namespace PolicePursuit.Gameplay
 
         public void ResetBlock()
         {
-            foreach (var c in cars) c.gameObject.SetActive(false);
+            Clear();
             sinceStart = 0;
             nextAt = FirstAfter;
         }
@@ -59,9 +64,11 @@ namespace PolicePursuit.Gameplay
             if (Active)
             {
                 upSince += dt;
+                if (!chased) { Clear(); return; }
+                if (Chasing) return;
                 var past = Vector3.Dot(player.transform.position - Centre, (PoliceChase.Centre(To) - PoliceChase.Centre(From)).normalized);
-                if (upSince > Lasts || past > ClearBehind || !chased) Clear();
-                foreach (var c in cars) c.Flash(true);
+                if (past > JoinPast && past < ClearBehind) Join(player.transform);
+                else if (upSince > Lasts || past >= ClearBehind) Clear();
                 return;
             }
             if (!chased || sinceStart < nextAt || Mathf.Abs(player.Speed) < MinSpeed) return;
@@ -89,9 +96,34 @@ namespace PolicePursuit.Gameplay
             nextAt = sinceStart + Every;
         }
 
+        void Join(Transform target)
+        {
+            Chasing = true;
+            for (int i = 0; i < cars.Length; i++)
+            {
+                cars[i].Handbrake = false;
+                chasers[i].ResetChase();
+                chasers[i].Target = target;
+            }
+        }
+
+        // Nearest roadblock car that is chasing, for the bust rule; infinity when none is.
+        public float ChaserDistance(Vector3 from)
+        {
+            if (!Chasing) return float.PositiveInfinity;
+            float best = float.PositiveInfinity;
+            foreach (var c in cars) best = Mathf.Min(best, Vector3.Distance(from, c.transform.position));
+            return best;
+        }
+
         public void Clear()
         {
-            foreach (var c in cars) c.gameObject.SetActive(false);
+            Chasing = false;
+            for (int i = 0; i < cars.Length; i++)
+            {
+                chasers[i].Target = null;
+                cars[i].gameObject.SetActive(false);
+            }
         }
 
         public VehicleController this[int i] => cars[i];

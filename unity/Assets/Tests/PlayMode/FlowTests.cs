@@ -992,4 +992,38 @@ public class FlowTests
         block.Tick(world.Car, false, 0.02f);
         Assert.IsFalse(block.Active, "gone when the chase is off");
     }
+
+    [UnityTest]
+    public IEnumerator RoadblockCarsChaseOnceYouAreThrough()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var block = world.Block;
+        block.Spawn(new Vector2Int(2, 3), new Vector2Int(2, 4)); // x = 0, cars around z = 81
+        yield return new WaitForFixedUpdate();
+        Assert.IsFalse(block.Chasing, "waits while you are still on the way");
+
+        world.Car.Place(new Vector3(0, 0.6f, 95), 0); // just through, heading on north
+        yield return new WaitForFixedUpdate();
+        block.Tick(world.Car, true, 0.02f);
+        Assert.IsTrue(block.Chasing, "joins the chase once you are past");
+        Assert.LessOrEqual(world.PoliceDistance, block.ChaserDistance(world.Car.transform.position) + 0.01f, "they count for being busted");
+
+        var start = new[] { block[0].transform.position, block[1].transform.position };
+        float closest = block.ChaserDistance(world.Car.transform.position);
+        yield return new WaitForSeconds(1.5f); // short of the 2 s it takes to be busted
+        Assert.IsTrue(block.Active);
+        Assert.Greater(Vector3.Distance(block[0].transform.position, start[0]) + Vector3.Distance(block[1].transform.position, start[1]), 3, "they drive off after you");
+        Assert.Less(block.ChaserDistance(world.Car.transform.position), closest, "and close in");
+
+        block.Tick(world.Car, true, PolicePursuit.Gameplay.RoadBlock.Lasts + 1);
+        Assert.IsTrue(block.Active, "a chasing roadblock does not pack up on a timer");
+        block.Tick(world.Car, false, 0.02f);
+        Assert.IsFalse(block.Active);
+        Assert.IsFalse(block.Chasing, "off when the chase is off");
+    }
+
 }
