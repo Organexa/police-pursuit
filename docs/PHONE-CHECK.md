@@ -13,14 +13,14 @@ Each round is one sitting of about 10 minutes. Once every box for a ticket is ti
 - [x] OW37 Crawl in a queue of traffic for 3 s with the helicopter overhead: it loses you.
 
 ## Round 2 — On foot (stop, EXIT)
-- [ ] OW3 EXIT, walk with the stick, SPRINT, JUMP, drag to look; camera stays out of walls; ENTER within 4 m.
-- [ ] OW9 People walk the pavements; they run from a fast car or the police car; drive at one and they dive.
-- [ ] OW11 Some wait at corners and cross on a fresh red.
-- [ ] OW12 HORN near people makes them walk faster.
-- [ ] OW25 / OW27 On foot near the police: a dog comes out, barks, catches you = bust; DODGE breaks its hold.
-- [ ] OW26 / OW30 / OW31 Wade the park pond: half speed; the dog swims after you if it sees you, shakes itself dry on land, loses you when out of sight.
-- [ ] OW28 / OW29 Jump a park fence: the dog runs round to the open end.
-- [ ] OW32 / OW33 Wet prints behind you and the dog for a few seconds after the water.
+- [x] OW3 EXIT, walk with the stick, SPRINT, JUMP, drag to look; camera stays out of walls; ENTER within 4 m.
+- [x] OW9 People walk the pavements; they run from a fast car or the police car; drive at one and they dive.
+- [x] OW11 Some wait at corners and cross on a fresh red.
+- [x] OW12 HORN near people makes them walk faster.
+- [x] OW25 / OW27 On foot near the police: a dog comes out, barks, catches you = bust; DODGE breaks its hold.
+- [x] OW26 / OW30 / OW31 Wade the park pond: half speed; the dog swims after you if it sees you, shakes itself dry on land, loses you when out of sight.
+- [x] OW28 / OW29 Jump a park fence: the dog runs round to the open end.
+- [x] OW32 / OW33 Wet prints behind you and the dog for a few seconds after the water.
 
 ## Round 3 — A long chase (keep driving fast, don't stop)
 - [ ] OW19 / OW20 / OW39 Roadblock ahead with a strip before it and a gap on the right; its cars join the chase once you pass.
