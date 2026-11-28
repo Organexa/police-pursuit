@@ -107,6 +107,7 @@ namespace PolicePursuit.Core
             while (GameManager.Instance == null && Time.realtimeSinceStartup < until) yield return null;
             var game = GameManager.Instance;
             if (!Check("boot", game != null, "the game started")) { Finish(); yield break; }
+            Check("app-name", Application.productName == "Police Pursuit", $"'{Application.productName}' by '{Application.companyName}'");
             yield return new WaitForSecondsRealtime(2);
             yield return Shot("menu");
 
