@@ -12,8 +12,15 @@ Everything is built in code at runtime (no scene edits). `Core/GameManager.cs` o
 `VehicleController` (Rigidbody + WheelColliders) · `PoliceChase` (grid-route AI, shared `Steer`) · `FleeDriver` · `Walker` + `TouchStick`/`LookPad` · `Health`/`IDamageable` · `WeaponData` (ScriptableObject) / `WeaponController` · `MeleeController` · `Suspect` · `Mission` · `CivilTraffic` (+`CivilCar`) · `TrafficLights` · `Pedestrians` · `RoadBlock` · `Helicopter` · `PoliceDog` · `PrintTrail` · `Weather` · `Puddles` · `SpikeStrip` · `CrossroadSpikes`. UI in `UI/GameUI.cs` (`BuildRoamHud`, `TickRoam`, mission intro/result). Tests: `Tests/EditMode/CoreTests.cs`, `Tests/PlayMode/FlowTests.cs` (one big file).
 
 ## State of the branch `feat/f1-f14`
-- Everything is committed and pushed: GitHub is at `7ab263d` (parked police cars; `2a79b3a` before it makes every escape start calm). CI passes on it: PlayMode 56/56, EditMode 43/43. Latest phone build: `Builds/7ab263d/`.
-- A separate project for Organexa was started on 2026-11-28 in `C:\Organexa-Business-Suite` (its own session); it is not part of this repo.
+- Everything is committed and pushed: GitHub is at `d616c48` (HUD, milestone 2). Scratch: EditMode 44/44, PlayMode 62/62. The master prompt's gap analysis is `docs/GAP-ANALYSIS.md` (uncommitted at the user's request: "later").
+- Done 2026-11-28 evening, each tested, autotested on the emulator, committed with the user's OK:
+  - Milestone 1, vehicle feel (`a07f356`, `6e34e82`, `e09f222`): head/brake lights, skid marks (sideways slides and locked brakes only; measured: forwardSlip is about +1 spinning, -1 locked) and soft see-through smoke (`Resources/Smoke.shader`; the opaque `Flat` shader drew grey squares), five-gear engine note in the open world (it had no engine sound), crash damage for your car only (HUD bar, bonnet smoke, dead at 0, repaired on a fresh start).
+  - `82195a1`: app named "Police Pursuit" by "Organexa" (`Editor/PackageName.cs`; it was "unity"/"DefaultCompany").
+  - `8b0e862`: traction control (`VehicleController.TractionControl`, slip 0.5): 3 s launch 42 -> 48 km/h, wheelspin halved (measured table in the code comment).
+  - `3c963e5`: 16 ComfyUI props (4 dumpsters + 4 barriers by the outer walls between the parked cars, 4 benches in the park, 4 hydrants by walls on the northern road), placed by `OpenWorld.PlaceStreetProps`; test `StreetPropsStayOffRoadsWalkwaysAndThePond`.
+  - `d616c48` (milestone 2): HUD bars (health/stamina on foot, car condition driving), mini-map from UI boxes, Settings > Controls layout (Hand right/left, Button size 80-130%, saved in `SaveData.leftHanded/buttonScale`).
+- Admin panel redesign from another session was merged by the user (PR #7, `a1b14d9`).
+- Separate projects with their own sessions, not in this repo: `C:\Organexa-Business-Suite` (InvoicePro, CleanQuote) and `C:\trypost` (TryPost: waits for the user to restart Windows after the WSL2 install, then Docker Desktop).
 - **All 43 open-world tickets are ☑ (done)**: played on the phone in five rounds with `docs/PHONE-CHECK.md` (every box ticked, frame rate / buttons / text included).
 - Today's fixes, all in PlayMode tests and on CI:
   - `11ed156`: `PoliceChase` and `FleeDriver` steer in `FixedUpdate` (long CI frames ran many physics steps on stale inputs). Real game bug found by it: within 8 m the police stalled at ~7.7 m, outside the 7 m bust range; they now creep in (coast above 2 m/s, pedal 0.5 below). Checked on the phone.
@@ -27,7 +34,9 @@ Test → commit only once it passes → push when the user says (they reply "Com
 - Never open the real project for tests and never upgrade its Unity (project pins 6000.3.29f1). Use a scratch copy with Unity **6000.6.10f1**: `C:\Program Files\Unity\Hub\Editor\6000.6.10f1\Editor\Unity.exe`.
 - Copy `unity/Assets`, `unity/Packages`, `unity/ProjectSettings` to a scratch folder; also copy repo `shared/` next to it (EditMode tests read `../shared/*.json`). Run `-batchmode -projectPath <copy> -runTests -testPlatform EditMode|PlayMode -testResults <xml> -logFile <log>`; check `<log>` for `error CS` first, then the XML. In sh scripts, build Windows paths with `/`, not `\\$var` (that escapes the `$`).
 - Delete old result XML before each run (stale XML once looked like a pass). Don't run two Unity instances on one copy; never kill all `Unity.exe` (the user may have their own editor open; closing processes needs the user's OK).
-- Last passing results (2026-11-28, `b437033`): scratch EditMode 43/43, PlayMode 55/55 (three full runs in a row).
+- Last passing results (2026-11-28, `d616c48`): scratch EditMode 44/44, PlayMode 62/62.
+- **Device autotest (no hands):** `python tools/android_autotest.py Builds/<sha>/PolicePursuit.apk` runs CI's test APK on the `Medium_Phone_API_37.0` emulator (it starts one with `-gpu host` if none is attached) and writes `report.txt` + screenshots to `Builds/<sha>/autotest/`. Docs: `docs/TESTING.md` 2.5. Review every screenshot: they found the opaque smoke and the camera lag. Pitfalls: another session's emulator without `-gpu host` stalls Unity (close it, with that session's OK); another app launched on the shared emulator pauses the run (the Organexa session agreed to stay off it during runs). Fetch the APK: run page in the built-in browser, `navigate` to the artifact URL (reports "failed" but downloads), find it on the Desktop or as a `.tmp` in Downloads by its SHA-256.
+- Measure before tuning: a scratch-only probe test (never committed) gave the slip signs and the traction table; keep doing that rather than guessing.
 - Last scratch copy (warm `Library`, in a temp folder that may be cleaned): `C:\Users\Pritam Singh\AppData\Local\Temp\claude\d2999c7a72780b98\f1a41871-1fd4-4da9-8b1e-16d877f85094\scratchpad\proj`. Seeding a new copy's `Library` from an old one saves most of the import.
 - New PlayMode tests: wait on conditions with generous limits, not fixed short waits; CI frames are long.
 
@@ -54,7 +63,9 @@ android-check builds a `debug-apk` artifact (kept 3 days) on every push to `feat
 Open world is a separate mode beside the endless run · placeholder art until the user buys character/animation packs (or ComfyUI props stand in) · fairness rules: AI never faster than the player, strips/roadblocks always leave a way through, civilians and dogs cannot be hurt · keyboard keys exist for editor testing · `com.unity.modules.vehicles` and `.particlesystem` added to the manifest.
 
 ## Exact next steps
-Nothing is queued: CI is green, everything is pushed, every open-world ticket is done. Ask the user what is next. Open questions that are theirs to decide:
-- Whether to make more props with ComfyUI (the parked police cars are in and checked).
-- Character art and animations (buy a pack, or placeholders).
-- Whether open-world scores go to the leaderboard (needs a server rule).
+Working through `docs/GAP-ANALYSIS.md` milestones in order (the user said "go in that order"):
+1. Check `d616c48`'s test APK on the emulator (prop screenshots after the camera fix, HUD bars and mini-map in every shot); ask the user to try Settings > Controls layout on the phone (the autotest does not open Settings).
+2. Milestone 3: a central player state machine replacing the on-foot flag (needed before animations and new missions).
+3. Milestone 4: profiler pass on a real phone, LODs, an Ultra preset; also the motion blur that smears every camera jump (master prompt section 5 asks for little blur on phones).
+4. Then 5 (animations: waits on the user's character-pack decision), 6 (Mission 2), 7 (`DECISIONS.md`, `TEST-REPORT.md`).
+Open questions that are the user's: character art and animations; open-world scores on the leaderboard (needs a server rule); committing `docs/GAP-ANALYSIS.md`.
