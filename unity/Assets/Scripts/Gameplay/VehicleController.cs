@@ -63,14 +63,16 @@ namespace PolicePursuit.Gameplay
             foreach (var r in brakeLamps) Shapes.Paint(r, on ? Shapes.Red : Shapes.Hex(0x5A0A0A), on ? 2 : 0);
         }
 
-        // A rear tyre (0 left, 1 right) that is sliding sideways or spinning/locking, and where it touches the road.
+        // A rear tyre (0 left, 1 right) that is sliding sideways or locked under braking, and where it touches the road.
+        // Wheelspin under power never counts: every full-throttle start left a long pair of marks.
+        // Measured here (Unity 6000.6, 2026-11-28): forwardSlip is about +1 spinning under power, -1 locked braking.
         public const float SkidSlip = 0.35f;
         public bool Sliding(int rear, out Vector3 at)
         {
             at = default;
             if (!wheels[2 + rear].GetGroundHit(out var hit) || Mathf.Abs(Speed) < 3) return false;
             at = hit.point;
-            return Mathf.Abs(hit.sidewaysSlip) > SkidSlip || Mathf.Abs(hit.forwardSlip) > SkidSlip * 1.5f;
+            return Mathf.Abs(hit.sidewaysSlip) > SkidSlip || hit.forwardSlip < -SkidSlip * 1.5f;
         }
 
         // A police car gets a red and blue light bar on the roof.
