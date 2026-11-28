@@ -4,13 +4,13 @@ Build: `11ed156` test APK (already on the phone). Tick a box when it works; writ
 Each round is one sitting of about 10 minutes. Once every box for a ticket is ticked, it moves from ◐ to ☑ in `FEATURE-TICKETS.md`.
 
 ## Round 1 — Free roam, driving (menu → Open World)
-- [ ] OW1 Car drives, brakes, reverses; HAND slides the back out; steering is calm at speed; a roll-over puts you back on your wheels; Back returns to the menu.
+- [x] OW1 Car drives, brakes, reverses; HAND slides the back out; steering is calm at speed; a roll-over puts you back on your wheels; Back returns to the menu.
 - [x] OW2 Police chase you; stop and they bust you (checked 2026-11-28).
-- [ ] OW8 Civilian cars keep right, turn at crossroads, stop behind you; a hard hit knocks one loose.
-- [ ] OW10 Lamps change; civilian cars wait at the line on red, go on green.
-- [ ] OW13 Civilian cars ahead of the chasing police car ease to the kerb.
-- [ ] OW17 / OW18 Police and civilian cars stop for people on a crossing.
-- [ ] OW37 Crawl in a queue of traffic for 3 s with the helicopter overhead: it loses you.
+- [x] OW8 Civilian cars keep right, turn at crossroads, stop behind you; a hard hit knocks one loose.
+- [x] OW10 Lamps change; civilian cars wait at the line on red, go on green.
+- [x] OW13 Civilian cars ahead of the chasing police car ease to the kerb.
+- [x] OW17 / OW18 Police and civilian cars stop for people on a crossing.
+- [x] OW37 Crawl in a queue of traffic for 3 s with the helicopter overhead: it loses you.
 
 ## Round 2 — On foot (stop, EXIT)
 - [ ] OW3 EXIT, walk with the stick, SPRINT, JUMP, drag to look; camera stays out of walls; ENTER within 4 m.
