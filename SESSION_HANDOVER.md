@@ -12,7 +12,8 @@ Everything is built in code at runtime (no scene edits). `Core/GameManager.cs` o
 `VehicleController` (Rigidbody + WheelColliders) · `PoliceChase` (grid-route AI, shared `Steer`) · `FleeDriver` · `Walker` + `TouchStick`/`LookPad` · `Health`/`IDamageable` · `WeaponData` (ScriptableObject) / `WeaponController` · `MeleeController` · `Suspect` · `Mission` · `CivilTraffic` (+`CivilCar`) · `TrafficLights` · `Pedestrians` · `RoadBlock` · `Helicopter` · `PoliceDog` · `PrintTrail` · `Weather` · `Puddles` · `SpikeStrip` · `CrossroadSpikes`. UI in `UI/GameUI.cs` (`BuildRoamHud`, `TickRoam`, mission intro/result). Tests: `Tests/EditMode/CoreTests.cs`, `Tests/PlayMode/FlowTests.cs` (one big file).
 
 ## State of the branch `feat/f1-f14`
-- Everything is committed and pushed: GitHub is at `ae80829`. CI's Unity tests pass on `b7b488f` (the user confirmed); `ae80829` only changes a doc.
+- Everything is committed and pushed: GitHub is at `7ab263d` (parked police cars; `2a79b3a` before it makes every escape start calm). CI passes on it: PlayMode 56/56, EditMode 43/43. Latest phone build: `Builds/7ab263d/`.
+- A separate project for Organexa was started on 2026-11-28 in `C:\Organexa-Business-Suite` (its own session); it is not part of this repo.
 - **All 43 open-world tickets are ☑ (done)**: played on the phone in five rounds with `docs/PHONE-CHECK.md` (every box ticked, frame rate / buttons / text included).
 - Today's fixes, all in PlayMode tests and on CI:
   - `11ed156`: `PoliceChase` and `FleeDriver` steer in `FixedUpdate` (long CI frames ran many physics steps on stale inputs). Real game bug found by it: within 8 m the police stalled at ~7.7 m, outside the 7 m bust range; they now creep in (coast above 2 m/s, pedal 0.5 below). Checked on the phone.
@@ -47,13 +48,13 @@ android-check builds a `debug-apk` artifact (kept 3 days) on every push to `feat
   - Images: `tools/comfy_image.py "<prompt>" --name x` (SDXL Turbo, ~1–3 min per 512×512).
   - 3D: `C:\ComfyUI\venv\Scripts\python.exe tools/comfy_3d.py <image>` (not with `-I`) → BiRefNet removes the background, TripoSR builds a vertex-coloured `.obj` (~3.5 min). Then `... tools/game_mesh.py <mesh.obj> --length L --width W --height H` → game-ready `<name>-game/` (Y up, front +Z, metres, pivot on the ground, ~8k triangles, colours baked to a PNG, white material); pass real width/height, TripoSR makes things too fat. Checked importing into Unity 6000.6.
   - Installed: custom node `ComfyUI-Flowty-TripoSR` (commit a0c94ac, with a local patch in `tsr/system.py` renaming ViT keys for transformers 5; never `pip install -r` its requirements.txt, it pins transformers 4.35), `models/checkpoints/triposr.ckpt` (1.68 GB), `models/background_removal/birefnet.safetensors` (444 MB, MIT), pip `trimesh scikit-image omegaconf imageio fast-simplification xatlas`. All downloads were SHA-256-checked. Hunyuan3D 2.1 is in ComfyUI core but needs a GPU. Ask before any new model download.
-  - Made so far: a police car (`art/generated/20261128-151719-police-car-game/`, 8,000 triangles, 4.6 × 1.9 × 1.5 m). Good for a parked/background prop, not the car you drive (hidden side and wheels are blobs). **Not added to the game project**: ask the user where it should go.
+  - Made so far: a police car (8,000 triangles, 4.6 × 1.9 × 1.5 m). Good for a parked/background prop, not the car you drive (hidden side and wheels are blobs). **In the game since `7ab263d`:** `Resources/ParkedPoliceCar/` (URP Lit, no `.meta` files committed, as in the rest of the repo), placed by `OpenWorld.ParkPoliceCars()` as 8 parked cars in the strip between the outer roads and the wall (off every road, so roadblock gaps and spike strips are untouched); test `ParkedPoliceCarsSitOffEveryRoad`. The user checked them on the phone (2026-11-28): fine.
 
 ## Key decisions
 Open world is a separate mode beside the endless run · placeholder art until the user buys character/animation packs (or ComfyUI props stand in) · fairness rules: AI never faster than the player, strips/roadblocks always leave a way through, civilians and dogs cannot be hurt · keyboard keys exist for editor testing · `com.unity.modules.vehicles` and `.particlesystem` added to the manifest.
 
 ## Exact next steps
 Nothing is queued: CI is green, everything is pushed, every open-world ticket is done. Ask the user what is next. Open questions that are theirs to decide:
-- Where (if anywhere) the generated police car goes in the game, and whether to make more props with ComfyUI.
+- Whether to make more props with ComfyUI (the parked police cars are in and checked).
 - Character art and animations (buy a pack, or placeholders).
 - Whether open-world scores go to the leaderboard (needs a server rule).
