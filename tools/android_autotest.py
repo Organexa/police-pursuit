@@ -2,7 +2,7 @@
 
 Usage:
     python tools/android_autotest.py Builds/7ab263d/PolicePursuit.apk
-    python tools/android_autotest.py <apk> --avd Medium_Phone --keep-emulator --out art/autotest
+    python tools/android_autotest.py <apk> --avd Medium_Phone_API_37.0 --keep-emulator --out art/autotest
 
 Starts the emulator without a window if no device is attached, installs the APK, launches it with the "autotest"
 extra, follows the AUTOTEST lines in the log, takes a screenshot at each SHOT, and writes report.txt with the
@@ -13,9 +13,11 @@ The emulator runs Arm code through translation: its frame rate says nothing abou
 """
 import argparse
 import os
+import queue
 import re
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -39,20 +41,72 @@ def device_ready() -> bool:
 
 
 def start_emulator(avd: str, boot_timeout: float) -> subprocess.Popen:
+    if not avd:
+        found = subprocess.run([str(EMULATOR), "-list-avds"], capture_output=True, text=True).stdout.split()
+        if not found:
+            raise RuntimeError("no emulator phone (AVD) exists; make one in Android Studio's Device Manager")
+        avd = found[0]
     print(f"Starting emulator {avd} (no window)...")
+    log = Path(os.environ.get("TEMP", "/tmp")) / "android_autotest_emulator.log"
+    # -gpu host: the real GPU. "auto" chose llvmpipe (Vulkan on the CPU), too slow for Unity: adb dropped off.
     proc = subprocess.Popen([str(EMULATOR), "-avd", avd, "-no-window", "-no-audio", "-no-boot-anim",
-                             "-no-snapshot-save", "-gpu", "auto"],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                             "-no-snapshot-save", "-gpu", "host"],
+                            stdout=log.open("w"), stderr=subprocess.STDOUT)
     deadline = time.time() + boot_timeout
     while time.time() < deadline:
         if proc.poll() is not None:
-            raise RuntimeError(f"the emulator exited (code {proc.returncode})")
+            tail = log.read_text(errors="replace").strip().splitlines()[-5:]
+            raise RuntimeError(f"the emulator exited (code {proc.returncode}): " + " / ".join(tail))
         if device_ready() and adb("shell", "getprop", "sys.boot_completed", check=False) == "1":
             print("Emulator booted.")
             return proc
         time.sleep(3)
     proc.kill()
     raise RuntimeError(f"the emulator did not boot within {boot_timeout:.0f} s")
+
+
+def follow_log():
+    # logcat on a reader thread, so the main loop can time out and notice when the device drops off.
+    proc = subprocess.Popen([str(ADB), "logcat", "-v", "time", "Unity:V", "AndroidRuntime:E", "DEBUG:F", "*:S"],
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    q = queue.Queue()
+
+    def pump():
+        for raw in proc.stdout:
+            q.put(raw.decode(errors="replace").rstrip())
+
+    threading.Thread(target=pump, daemon=True).start()
+    return proc, q
+
+
+def wait_for_device(seconds: float) -> bool:
+    try:
+        subprocess.run([str(ADB), "wait-for-device"], timeout=seconds, capture_output=True)
+        return device_ready()
+    except subprocess.TimeoutExpired:
+        return False
+
+
+def screenshot(path: Path) -> bool:
+    try:
+        path.write_bytes(adb("exec-out", "screencap", "-p", binary=True, timeout=60))
+        return True
+    except Exception as e:  # noqa: BLE001 - a missed screenshot must not end the run
+        print(f"screenshot failed: {e}")
+        return False
+
+
+def prepare_device():
+    # A sleeping screen pauses Unity (no frames, so the autotest never starts); keep it awake and unlocked,
+    # accept Android's one-time "Viewing full screen" hint so it does not cover the screenshots, and keep a log
+    # buffer big enough that start-up lines are not lost.
+    for cmd in (["shell", "svc", "power", "stayon", "true"],
+                ["shell", "settings", "put", "system", "screen_off_timeout", "1800000"],
+                ["shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed"],
+                ["shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+                ["shell", "wm", "dismiss-keyguard"],
+                ["logcat", "-G", "16M"]):
+        adb(*cmd, check=False)
 
 
 def launch_component() -> str:
@@ -66,10 +120,11 @@ def launch_component() -> str:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("apk", type=Path)
-    p.add_argument("--avd", default="Medium_Phone")
+    p.add_argument("--avd", help="emulator phone to start (default: the first one `emulator -list-avds` shows)")
     p.add_argument("--out", type=Path)
     p.add_argument("--timeout", type=float, default=900, help="seconds for the whole autotest")
     p.add_argument("--boot-timeout", type=float, default=420)
+    p.add_argument("--start-timeout", type=float, default=300, help="seconds to wait for the first AUTOTEST line")
     p.add_argument("--keep-emulator", action="store_true", help="leave an emulator this script started running")
     a = p.parse_args()
 
@@ -89,57 +144,63 @@ def main() -> int:
         print("Installing", a.apk)
         adb("install", "-r", "-g", str(a.apk), timeout=600)
         comp = launch_component()
+        prepare_device()
         adb("shell", "am", "force-stop", PACKAGE)
         adb("logcat", "-c")
         adb("shell", "am", "start", "-n", comp, "--es", "autotest", "1")
         print("Launched", comp)
 
-        log = subprocess.Popen([str(ADB), "logcat", "-v", "brief", "Unity:V", "AndroidRuntime:E", "DEBUG:F", "*:S"],
-                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        lines, passed, failed, done, crashed = [], 0, 0, False, False
-        deadline = time.time() + a.timeout
-        started = False
+        lines, passed, failed, done, crashed, started = [], 0, 0, False, False, False
+        seen, shots, t0 = set(), 0, time.time()
+        deadline = t0 + a.timeout
+        log, q = follow_log()
         try:
-            while time.time() < deadline:
-                raw = log.stdout.readline()
-                if not raw:
-                    if log.poll() is not None:
-                        break
+            while time.time() < deadline and not done:
+                if not started and time.time() - t0 > a.start_timeout:
+                    break
+                try:
+                    text = q.get(timeout=5)
+                except queue.Empty:
+                    if log.poll() is not None:  # logcat ended: the device dropped off; wait for it, then follow again
+                        print(f"[{time.time() - t0:5.0f}s] device dropped off; waiting for it...")
+                        if not wait_for_device(120):
+                            lines.append("DEVICE LOST")
+                            break
+                        log, q = follow_log()
                     continue
-                text = raw.decode(errors="replace").rstrip()
+                if text in seen:  # a reconnected logcat replays its buffer
+                    continue
+                seen.add(text)
                 if "FATAL EXCEPTION" in text or "Fatal signal" in text or ("AndroidRuntime" in text and PACKAGE in text):
                     crashed = True
                     lines.append("CRASH " + text)
                     print("CRASH", text)
                 m = LINE.search(text)
                 if not m:
-                    if crashed and len([l for l in lines if l.startswith("CRASH")]) > 30:
-                        break
                     continue
-                kind, rest = m.group(1), m.group(2)
+                kind, rest = m.group(1), m.group(2).strip()
                 started = True
                 lines.append(f"{kind} {rest}")
-                print(kind, rest)
+                print(f"[{time.time() - t0:5.0f}s] {kind} {rest}")
                 if kind == "SHOT":
-                    png = adb("exec-out", "screencap", "-p", binary=True, timeout=60)
-                    (out / f"{len([l for l in lines if l.startswith('SHOT')]):02d}-{rest.strip() or 'shot'}.png").write_bytes(png)
+                    shots += 1
+                    if not screenshot(out / f"{shots:02d}-{rest or 'shot'}.png"):
+                        lines.append(f"NOSHOT {rest}")
                 elif kind == "PASS":
                     passed += 1
                 elif kind == "FAIL":
                     failed += 1
                 elif kind == "DONE":
                     done = True
-                    break
-                if not started and time.time() > deadline - a.timeout + 120:
-                    break
         finally:
             log.kill()
 
         if not done:
-            reason = "crashed" if crashed else "no AUTOTEST lines (not a test APK?)" if not started else "timed out"
+            reason = ("crashed" if crashed else "device lost" if "DEVICE LOST" in lines
+                      else f"no AUTOTEST lines within {a.start_timeout:.0f} s (not a test APK, or too slow to start?)"
+                      if not started else "timed out")
             lines.append(f"INCOMPLETE {reason}")
-            adb("exec-out", "screencap", "-p", binary=True, timeout=60) and \
-                (out / "last-screen.png").write_bytes(adb("exec-out", "screencap", "-p", binary=True, timeout=60))
+            screenshot(out / "last-screen.png")
         ok = done and failed == 0 and not crashed
         summary = f"{'OK' if ok else 'FAILED'}: passed={passed} failed={failed} done={done} crashed={crashed}"
         (out / "report.txt").write_text(f"{a.apk}\n{summary}\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
