@@ -1703,4 +1703,46 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator SpikeStripBlowsYourTyresButLeavesALaneClear()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        var spikes = world.Spikes;
+        spikes.Spawn(new Vector2Int(2, 2), new Vector2Int(2, 3)); // north of the centre, x = 0, at z = 18
+        yield return null;
+        Assert.IsTrue(spikes.Active);
+        var centre = spikes.Centre;
+        Assert.Greater(centre.x, 0, "on the right-hand lane");
+
+        // Down the clear left lane, straight past it.
+        for (float z = centre.z - 10; z < centre.z + 10; z += 0.5f)
+        {
+            world.Car.Place(new Vector3(-PolicePursuit.Gameplay.CivilCar.Lane, 0.6f, z), 0);
+            yield return null;
+        }
+        Assert.IsFalse(world.Punctured, "the other lane is always clear");
+
+        // Over it in the right lane.
+        for (float z = centre.z - 6; z < centre.z + 6; z += 0.5f)
+        {
+            world.Car.Place(new Vector3(PolicePursuit.Gameplay.CivilCar.Lane, 0.6f, z), 0);
+            yield return null;
+        }
+        Assert.IsTrue(world.Punctured, "tyres blown");
+        Assert.AreEqual(PolicePursuit.Gameplay.VehicleController.TopSpeed * PolicePursuit.Gameplay.SpikeStrip.PuncturedScale, world.Car.SpeedLimit, 0.01f, "half speed");
+
+        world.Restart();
+        Assert.IsFalse(world.Punctured, "a fresh start comes with new tyres");
+        Assert.AreEqual(PolicePursuit.Gameplay.VehicleController.TopSpeed, world.Car.SpeedLimit, 0.01f);
+        Assert.IsFalse(spikes.Active);
+        world.Police.enabled = true;
+    }
+
 }

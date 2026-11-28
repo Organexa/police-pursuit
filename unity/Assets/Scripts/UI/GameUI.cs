@@ -337,7 +337,8 @@ namespace PolicePursuit.UI
                 if (Gameplay.KeyInput.SirenPressed()) world.ToggleSiren();
                 sirenButton.transform.parent.gameObject.SetActive(world.PlayerIsPolice);
                 sirenButton.text = world.SirenOn ? "SIREN ON" : "SIREN";
-                speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h    Police {Mathf.RoundToInt(world.PoliceDistance)} m";
+                speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h    Police {Mathf.RoundToInt(world.PoliceDistance)} m"
+                    + (world.Punctured ? "    TYRES BLOWN" : "");
             }
             var m = world.Mission;
             int wanted = world.Wanted;

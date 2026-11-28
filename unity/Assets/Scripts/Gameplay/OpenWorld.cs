@@ -42,6 +42,8 @@ namespace PolicePursuit.Gameplay
         public Pedestrians People { get; private set; }
         public TrafficLights Lights { get; private set; }
         public RoadBlock Block { get; private set; }
+        public SpikeStrip Spikes { get; private set; }
+        public bool Punctured { get; private set; } // tyres blown on a spike strip: half speed until you start over
 
         // Wanted level while the police are after you: 1 star, one more every 30 s (the endless run's rule), up to 5.
         // Out of sight and over 80 m from every police car (and out of the searchlight) for 10 s: back to 1.
@@ -217,6 +219,9 @@ namespace PolicePursuit.Gameplay
             Block = new GameObject("Roadblock").AddComponent<RoadBlock>();
             Block.transform.SetParent(transform, false);
             Block.Init();
+            Spikes = new GameObject("Spikes").AddComponent<SpikeStrip>();
+            Spikes.transform.SetParent(transform, false);
+            Spikes.Init();
             Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
             Lights.transform.SetParent(transform, false);
@@ -366,6 +371,9 @@ namespace PolicePursuit.Gameplay
             Police.GetComponent<VehicleController>().Place(transform.TransformPoint(PoliceSpawn), 0);
             Police.ResetChase();
             Block.ResetBlock();
+            Spikes.ResetStrip();
+            Punctured = false;
+            Car.SpeedLimit = VehicleController.TopSpeed;
             ChaseTime = loseTime = 0;
             Heli.Leave();
             Dog.Recall();
@@ -440,6 +448,12 @@ namespace PolicePursuit.Gameplay
             TickWanted(Time.deltaTime);
             // Roadblocks only while the police are actually after you in your car.
             Block.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
+            Spikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
+            if (!Punctured && !OnFoot && Spikes.Over(Car.transform.position))
+            {
+                Punctured = true;
+                Car.SpeedLimit = VehicleController.TopSpeed * SpikeStrip.PuncturedScale;
+            }
             Fleer.From = Player;
             Traffic.Player = Player;
             Car.Flash(SirenOn);
