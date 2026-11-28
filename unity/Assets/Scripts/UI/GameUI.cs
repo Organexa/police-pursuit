@@ -255,7 +255,7 @@ namespace PolicePursuit.UI
             speedText = Label(root, new Vector2(0, 1), new Vector2(16, -16), new Vector2(460, 32), 22, TextAnchor.MiddleLeft);
             speedText.horizontalOverflow = HorizontalWrapMode.Overflow; // a long status line runs on instead of losing its end
             HealthFill = Meter(root, "Health", new Vector2(16, -52), Gameplay.Shapes.Red);
-            StaminaFill = Meter(root, "Stamina", new Vector2(16, -70), Gameplay.Shapes.Hex(0xFFD23F));
+            StaminaFill = Meter(root, "Stamina", new Vector2(16, -74), Gameplay.Shapes.Hex(0xFFD23F));
             CarFill = Meter(root, "Car", new Vector2(16, -52), Gameplay.Shapes.Cyan);
             BuildMiniMap(root);
             bustText = Label(root, Middle, new Vector2(0, 80), new Vector2(400, 40), 28, TextAnchor.MiddleCenter);
@@ -370,7 +370,7 @@ namespace PolicePursuit.UI
                 sirenButton.transform.parent.gameObject.SetActive(world.PlayerIsPolice);
                 sirenButton.text = world.SirenOn ? "SIREN ON" : "SIREN";
                 speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h   Police {Mathf.RoundToInt(world.PoliceDistance)} m"
-                    + (car.Wrecked ? "   CAR WRECKED: GET OUT" : $"   Car {Mathf.CeilToInt(car.Condition)}%")
+                    + (car.Wrecked ? "   CAR WRECKED: GET OUT" : "") // the Car bar shows the condition
                     + (world.Punctured ? "   TYRES BLOWN" : "");
             }
             var m = world.Mission;
@@ -837,15 +837,18 @@ namespace PolicePursuit.UI
         // A labelled bar; returns the fill, whose width is set as a 0..1 share.
         RectTransform Meter(Transform root, string label, Vector2 pos, Color colour)
         {
-            var bar = Box(root, label + "Bar", new Vector2(0, 1), pos, new Vector2(150, 14), Gameplay.Shapes.Navy);
+            var bar = Box(root, label + "Bar", new Vector2(0, 1), pos, new Vector2(150, 18), Gameplay.Shapes.Navy);
             bar.raycastTarget = false;
             var fill = Rect("Fill", bar.transform);
             Stretch(fill);
             var image = fill.gameObject.AddComponent<Image>();
             image.color = colour;
             image.raycastTarget = false;
-            var text = Label(bar.transform, Middle, Vector2.zero, new Vector2(150, 14), 11, TextAnchor.MiddleCenter);
+            var text = Label(bar.transform, Middle, Vector2.zero, new Vector2(150, 18), 14, TextAnchor.MiddleCenter);
             text.text = label;
+            var edge = text.gameObject.AddComponent<Outline>(); // white with a dark edge: readable on the fill and on the empty bar
+            edge.effectColor = new Color(0, 0, 0, 0.85f);
+            edge.effectDistance = new Vector2(1, -1);
             return fill;
         }
 
@@ -867,7 +870,7 @@ namespace PolicePursuit.UI
         // roads, the park, pond and canal, the police station, and dots for you, the chasing police and the escapee.
         void BuildMiniMap(Transform root)
         {
-            var map = Box(root, "MiniMap", new Vector2(0, 1), new Vector2(16, -90), new Vector2(MapSize, MapSize), new Color(0, 0, 0, 0.55f));
+            var map = Box(root, "MiniMap", new Vector2(0, 1), new Vector2(16, -100), new Vector2(MapSize, MapSize), new Color(0, 0, 0, 0.55f));
             map.raycastTarget = false;
             var m = map.transform;
             float s = MapScale, span = 2 * Gameplay.OpenWorld.Edge, blocks = Gameplay.OpenWorld.Blocks, pitch = Gameplay.OpenWorld.Pitch;
