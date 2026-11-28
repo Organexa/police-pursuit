@@ -24,6 +24,8 @@ namespace PolicePursuit.Gameplay
             prev = from;
             next = towards;
             stuckTime = reverseLeft = 0;
+            Scared = false; // a new escape starts calm, not with the last one's spooked speed cap
+            car.SpeedLimit = VehicleController.TopSpeed * Calm;
         }
 
         public static Vector2Int Choose(Vector2Int at, Vector2Int prev, Vector3 pursuer)
