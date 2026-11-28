@@ -2184,4 +2184,105 @@ public class FlowTests
         Assert.AreEqual(4, benches, "benches in the park");
         Assert.AreEqual(4, hydrants, "hydrants by the buildings");
     }
+
+    [UnityTest]
+    public IEnumerator HudBarsAndMiniMapFollowTheGame()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        yield return null;
+        yield return null;
+        var world = game.World;
+        world.Police.Target = null;
+        var ui = Object.FindFirstObjectByType<PolicePursuit.UI.GameUI>();
+
+        // Driving: the car's condition shows; health and stamina do not.
+        Assert.IsTrue(ui.CarFill.parent.gameObject.activeInHierarchy, "car bar while driving");
+        Assert.IsFalse(ui.HealthFill.parent.gameObject.activeInHierarchy);
+        Assert.AreEqual(1f, ui.CarFill.anchorMax.x, 0.01f, "a fresh car is full");
+
+        // The map dots follow you and the police; no escapee outside a mission.
+        Assert.AreEqual(PolicePursuit.UI.GameUI.MapPoint(world, world.Car.transform.position), ui.MapPlayer.anchoredPosition);
+        Assert.Less(ui.MapPlayer.anchoredPosition.magnitude, PolicePursuit.UI.GameUI.MapSize, "on the map");
+        Assert.IsTrue(ui.MapPolice.gameObject.activeSelf);
+        Assert.AreEqual(PolicePursuit.UI.GameUI.MapPoint(world, world.Police.transform.position).x, ui.MapPolice.anchoredPosition.x, 0.01f);
+        Assert.IsFalse(ui.MapFleer.gameObject.activeSelf, "no escapee in free roam");
+        var before = ui.MapPlayer.anchoredPosition;
+        yield return Drive(world.Car, 1, 1.5f);
+        Assert.Greater(Vector2.Distance(before, ui.MapPlayer.anchoredPosition), 1, "your dot moves as you drive");
+
+        // On foot: health and stamina show, and drop when hurt or tired.
+        for (float t = 0; t < 6 && world.Car.Speed > 0.5f; t += Time.deltaTime) { world.Car.Pedal = -1; yield return null; }
+        world.Car.Pedal = 0; // held longer, the brake would reverse
+        for (int i = 0; i < 10; i++) yield return null;
+        Assert.IsTrue(world.ExitCar());
+        yield return null;
+        Assert.IsTrue(ui.HealthFill.parent.gameObject.activeInHierarchy, "health bar on foot");
+        Assert.IsFalse(ui.CarFill.parent.gameObject.activeInHierarchy);
+        world.PlayerHealth.TakeDamage(world.PlayerHealth.Max / 2);
+        yield return null;
+        Assert.AreEqual(0.5f, ui.HealthFill.anchorMax.x, 0.02f, "half health, half a bar");
+
+        game.StartMission(PolicePursuit.Gameplay.Mission.Role.Police);
+        yield return null;
+        yield return null;
+        Assert.IsTrue(ui.MapFleer.gameObject.activeSelf, "the escapee shows on the map in the mission");
+    }
+
+    [UnityTest]
+    public IEnumerator LeftHandedAndLargerButtonsKeepTheirGaps()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        yield return null;
+        void SetLayout(bool left, float scale)
+        {
+            var s = SaveData.Load(SaveData.DefaultPath);
+            s.leftHanded = left;
+            s.buttonScale = scale;
+            s.Save(SaveData.DefaultPath);
+            game.ApplySettings(s);
+        }
+        RectTransform Find(string name)
+        {
+            foreach (var r in GameObject.Find("RoamHud").GetComponentsInChildren<RectTransform>(true)) if (r.name == name) return r;
+            return null;
+        }
+        var fire = Find("Button FIRE");
+        var stick = Find("Stick");
+        try
+        {
+            SetLayout(true, 1.25f);
+            yield return null;
+            yield return null;
+            Assert.AreEqual(0f, fire.anchorMin.x, "FIRE moves to the left side");
+            Assert.Greater(fire.anchoredPosition.x, 0, "measured in from the left edge");
+            Assert.AreEqual(1f, stick.anchorMin.x, "the stick moves to the right side");
+            Assert.AreEqual(1.25f, fire.localScale.x, 0.001f, "buttons 25% bigger");
+
+            // Gaps scale with the buttons: every on-foot button still at least 20 x 1.25 apart.
+            var rects = new System.Collections.Generic.List<(string, Rect)>();
+            foreach (var r in Find("Foot").GetComponentsInChildren<RectTransform>(true))
+                if (r.name.StartsWith("Button ") && r.anchorMin == Vector2.zero)
+                    rects.Add((r.name, new Rect(r.anchoredPosition, r.sizeDelta * r.localScale.x)));
+            Assert.AreEqual(8, rects.Count, "all eight on-foot buttons are bottom-left now");
+            for (int i = 0; i < rects.Count; i++)
+                for (int j = i + 1; j < rects.Count; j++)
+                {
+                    var (an, a) = rects[i];
+                    var (bn, b) = rects[j];
+                    float gap = Mathf.Max(Mathf.Max(a.xMin - b.xMax, b.xMin - a.xMax), Mathf.Max(a.yMin - b.yMax, b.yMin - a.yMax));
+                    Assert.GreaterOrEqual(gap, 24.9f, $"{an} and {bn} are too close");
+                }
+        }
+        finally { SetLayout(false, 1); }
+        yield return null;
+        yield return null;
+        Assert.AreEqual(1f, fire.anchorMin.x, "back on the right");
+        Assert.AreEqual(1f, fire.localScale.x, 0.001f);
+    }
 }

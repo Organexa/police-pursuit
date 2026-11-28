@@ -32,6 +32,24 @@ namespace PolicePursuit.UI
         GameObject roamHud;
         HoldButton roamLeft, roamRight, gas, brake, handbrake;
         Text speedText, bustText, doorText;
+        // Open-world status bars and mini-map (milestone 2).
+        public RectTransform HealthFill { get; private set; }
+        public RectTransform StaminaFill { get; private set; }
+        public RectTransform CarFill { get; private set; }
+        public RectTransform MapPlayer { get; private set; }
+        public RectTransform MapPolice { get; private set; }
+        public RectTransform MapFleer { get; private set; }
+        public const float MapSize = 128;
+        // Controls layout (milestone 2): the open-world controls, mirrored for left hands and scaled from their corner.
+        public const float MinButtonScale = 0.8f, MaxButtonScale = 1.3f;
+        readonly System.Collections.Generic.List<(RectTransform rect, Vector2 pos, Vector2 anchor)> pads =
+            new System.Collections.Generic.List<(RectTransform, Vector2, Vector2)>();
+        bool layoutLeft;
+        float layoutScale = -1;
+        GameObject layout;
+        Text handText;
+        Slider sizeSlider;
+        public static float MapScale => MapSize / (2 * Gameplay.OpenWorld.Edge); // pixels per metre
         GameObject driveControls, footControls;
         HoldButton sprint, jump, fire, block, arrest;
         Text sirenButton;
@@ -83,6 +101,7 @@ namespace PolicePursuit.UI
             busted.SetActive(state == GameState.Busted);
             results.SetActive(state == GameState.Results);
             settings.SetActive(false);
+            layout.SetActive(false);
             garage.SetActive(false);
             board.SetActive(false);
             consent.SetActive(false);
@@ -235,6 +254,10 @@ namespace PolicePursuit.UI
             // After the control sets, so their drag area never covers these.
             speedText = Label(root, new Vector2(0, 1), new Vector2(16, -16), new Vector2(460, 32), 22, TextAnchor.MiddleLeft);
             speedText.horizontalOverflow = HorizontalWrapMode.Overflow; // a long status line runs on instead of losing its end
+            HealthFill = Meter(root, "Health", new Vector2(16, -52), Gameplay.Shapes.Red);
+            StaminaFill = Meter(root, "Stamina", new Vector2(16, -70), Gameplay.Shapes.Hex(0xFFD23F));
+            CarFill = Meter(root, "Car", new Vector2(16, -52), Gameplay.Shapes.Cyan);
+            BuildMiniMap(root);
             bustText = Label(root, Middle, new Vector2(0, 80), new Vector2(400, 40), 28, TextAnchor.MiddleCenter);
             bustText.color = Gameplay.Shapes.Red;
             bustText.raycastTarget = false;
@@ -247,6 +270,9 @@ namespace PolicePursuit.UI
             MakeButton(root, "Menu", Vector2.one, new Vector2(-16, -16), new Vector2(96, 48), game.ToMenu);
             MakeButton(root, "Restart", Vector2.one, new Vector2(-120, -16), new Vector2(96, 48), () => game.World.Restart());
             doorText = MakeButton(root, "EXIT", bottomRight, new Vector2(-16, 270), new Vector2(110, 56), ToggleDoor);
+            CollectPads(driveControls.transform, footControls.transform);
+            var door = (RectTransform)doorText.transform.parent;
+            pads.Add((door, door.anchoredPosition, door.anchorMin));
         }
 
         // Intro and side choice, then the result screen with Retry.
@@ -301,6 +327,10 @@ namespace PolicePursuit.UI
         {
             var world = game.World;
             var car = world.Car;
+            TickMeters(world);
+            TickMiniMap(world);
+            var set = game.Settings;
+            if (set.leftHanded != layoutLeft || !Mathf.Approximately(set.buttonScale, layoutScale)) ApplyLayout(set.leftHanded, set.buttonScale);
             if (Gameplay.KeyInput.Interact()) ToggleDoor();
             bool onFoot = world.OnFoot;
             driveControls.SetActive(!onFoot);
@@ -326,7 +356,7 @@ namespace PolicePursuit.UI
                 if (Gameplay.KeyInput.KickPressed()) world.Melee.HeavyAttack();
                 if (Gameplay.KeyInput.DodgePressed()) Dodge();
                 ammoText.text = world.Gun.Reloading ? "Reloading..." : $"{world.Gun.Data.displayName}  {world.Gun.Ammo}/{world.Gun.Data.magazine}";
-                speedText.text = $"Health {Mathf.CeilToInt(world.PlayerHealth.Current)}  Stamina {Mathf.FloorToInt(world.Melee.Stamina)}    Police {Mathf.RoundToInt(world.PoliceDistance)} m";
+                speedText.text = $"Police {Mathf.RoundToInt(world.PoliceDistance)} m";
             }
             else
             {
@@ -419,12 +449,26 @@ namespace PolicePursuit.UI
             sound = SliderRow(settings, "Sound", 125, 0, 1, v => Change(s => s.soundVolume = v));
             music = SliderRow(settings, "Music", 45, 0, 1, v => Change(s => s.musicVolume = v));
             tilt = SliderRow(settings, "Tilt sensitivity", -35, 0.5f, 2, v => Change(s => s.tiltSensitivity = v));
-            controlsText = Option("", 110, () => { Change(s => s.tiltControls = !s.tiltControls); UpdateSettingsText(); });
-            hapticsText = Option("", 46, () => { Change(s => s.haptics = !s.haptics); UpdateSettingsText(); });
-            presetText = Option("", -18, () => { game.CyclePreset(); UpdateSettingsText(); });
-            Label(settings.transform, Middle, new Vector2(190, -68), new Vector2(220, 24), 18, TextAnchor.MiddleCenter).text = "Language: English";
-            Option("Replay tutorial", -118, game.StartTutorial);
-            Choice(settings, "Back", -180, CloseSettings);
+            // Right column, 64 apart (8 between buttons): one more row than before, so nothing is pressed by accident.
+            Label(settings.transform, Middle, new Vector2(190, 168), new Vector2(220, 24), 18, TextAnchor.MiddleCenter).text = "Language: English";
+            controlsText = Option("", 128, () => { Change(s => s.tiltControls = !s.tiltControls); UpdateSettingsText(); });
+            hapticsText = Option("", 64, () => { Change(s => s.haptics = !s.haptics); UpdateSettingsText(); });
+            presetText = Option("", 0, () => { game.CyclePreset(); UpdateSettingsText(); });
+            Option("Controls layout", -64, OpenLayout);
+            Option("Replay tutorial", -128, game.StartTutorial);
+            Choice(settings, "Back", -188, CloseSettings);
+
+            layout = Panel(safe, "Layout", Gameplay.Shapes.Dark);
+            Title(layout, "CONTROLS LAYOUT", 185);
+            Label(layout.transform, Middle, new Vector2(0, 130), new Vector2(600, 24), 18, TextAnchor.MiddleCenter).text =
+                "For the open world: on foot and in the car";
+            sizeSlider = SliderRow(layout, "Button size", 60, MinButtonScale, MaxButtonScale, v => Change(s => s.buttonScale = v));
+            handText = MakeButton(layout.transform, "", Middle, new Vector2(190, 40), Button, () =>
+            {
+                Change(s => s.leftHanded = !s.leftHanded);
+                UpdateLayoutText();
+            });
+            Choice(layout, "Back", -188, () => { layout.SetActive(false); settings.SetActive(true); });
             if (Ads.Configured)
                 MakeButton(settings.transform, "Privacy & ads", Middle, new Vector2(-190, -118), Button, ShowConsent);
             var delete = MakeButton(settings.transform, "Delete my account", Middle, new Vector2(-230, -180), Button,
@@ -695,6 +739,40 @@ namespace PolicePursuit.UI
 
         void CloseSettings() => Show(settingsFrom);
 
+        void OpenLayout()
+        {
+            sizeSlider.SetValueWithoutNotify(game.Settings.buttonScale);
+            UpdateLayoutText();
+            settings.SetActive(false);
+            layout.SetActive(true);
+        }
+
+        void UpdateLayoutText() => handText.text = "Hand: " + (game.Settings.leftHanded ? "Left" : "Right");
+
+        // Remembers every bottom-anchored open-world control (buttons, stick, ammo count) as built, for ApplyLayout.
+        void CollectPads(params Transform[] parents)
+        {
+            foreach (var parent in parents)
+                foreach (RectTransform r in parent)
+                    if (r.anchorMin.y == 0 && r.anchorMin == r.anchorMax) pads.Add((r, r.anchoredPosition, r.anchorMin));
+        }
+
+        // Mirrors the controls left to right and scales each from its screen corner: gaps grow with the buttons,
+        // so they never close up (the on-foot spacing test's 20 units become 20 x scale).
+        public void ApplyLayout(bool leftHanded, float scale)
+        {
+            scale = Mathf.Clamp(scale, MinButtonScale, MaxButtonScale);
+            foreach (var (rect, pos, anchor) in pads)
+            {
+                var a = leftHanded ? new Vector2(1 - anchor.x, anchor.y) : anchor;
+                rect.anchorMin = rect.anchorMax = rect.pivot = a;
+                rect.anchoredPosition = new Vector2(leftHanded ? -pos.x : pos.x, pos.y) * scale;
+                rect.localScale = Vector3.one * scale;
+            }
+            layoutLeft = leftHanded;
+            layoutScale = scale;
+        }
+
         void UpdateSettingsText()
         {
             controlsText.text = "Controls: " + (game.Settings.tiltControls ? "Tilt" : "Buttons");
@@ -754,6 +832,86 @@ namespace PolicePursuit.UI
 #else
             go.AddComponent<StandaloneInputModule>();
 #endif
+        }
+
+        // A labelled bar; returns the fill, whose width is set as a 0..1 share.
+        RectTransform Meter(Transform root, string label, Vector2 pos, Color colour)
+        {
+            var bar = Box(root, label + "Bar", new Vector2(0, 1), pos, new Vector2(150, 14), Gameplay.Shapes.Navy);
+            bar.raycastTarget = false;
+            var fill = Rect("Fill", bar.transform);
+            Stretch(fill);
+            var image = fill.gameObject.AddComponent<Image>();
+            image.color = colour;
+            image.raycastTarget = false;
+            var text = Label(bar.transform, Middle, Vector2.zero, new Vector2(150, 14), 11, TextAnchor.MiddleCenter);
+            text.text = label;
+            return fill;
+        }
+
+        static void SetMeter(RectTransform fill, float share) =>
+            fill.anchorMax = new Vector2(Mathf.Clamp01(share), 1);
+
+        void TickMeters(Gameplay.OpenWorld world)
+        {
+            bool onFoot = world.OnFoot;
+            HealthFill.parent.gameObject.SetActive(onFoot);
+            StaminaFill.parent.gameObject.SetActive(onFoot);
+            CarFill.parent.gameObject.SetActive(!onFoot);
+            SetMeter(HealthFill, world.PlayerHealth.Current / world.PlayerHealth.Max);
+            SetMeter(StaminaFill, world.Melee.Stamina / Gameplay.MeleeController.MaxStamina);
+            SetMeter(CarFill, world.Car.Condition / Gameplay.VehicleController.MaxCondition);
+        }
+
+        // North-up map of the district from plain UI boxes (no second camera, so it costs almost nothing):
+        // roads, the park, pond and canal, the police station, and dots for you, the chasing police and the escapee.
+        void BuildMiniMap(Transform root)
+        {
+            var map = Box(root, "MiniMap", new Vector2(0, 1), new Vector2(16, -90), new Vector2(MapSize, MapSize), new Color(0, 0, 0, 0.55f));
+            map.raycastTarget = false;
+            var m = map.transform;
+            float s = MapScale, span = 2 * Gameplay.OpenWorld.Edge, blocks = Gameplay.OpenWorld.Blocks, pitch = Gameplay.OpenWorld.Pitch;
+            Image Mark(string name, Vector3 at, Vector2 size, Color colour)
+            {
+                var image = Box(m, name, Middle, new Vector2(at.x, at.z) * s, size * s, colour);
+                image.raycastTarget = false;
+                return image;
+            }
+            var road = new Color(0.45f, 0.5f, 0.6f);
+            for (int i = 0; i <= blocks; i++)
+            {
+                float at = (i - blocks / 2) * pitch;
+                Mark("Road", new Vector3(at, 0, 0), new Vector2(Gameplay.OpenWorld.Road, span), road);
+                Mark("Road", new Vector3(0, 0, at), new Vector2(span, Gameplay.OpenWorld.Road), road);
+            }
+            var park = Gameplay.OpenWorld.ParkCentre;
+            float green = pitch - Gameplay.OpenWorld.Road;
+            Mark("Park", park, new Vector2(green, green), Gameplay.Shapes.Hex(0x1F6B2E));
+            Mark("Pond", park, Vector2.one * Gameplay.OpenWorld.PondHalf * 2, Gameplay.Shapes.Hex(0x2D7FD1));
+            Mark("Canal", new Vector3(0, 0, Gameplay.OpenWorld.CanalZ), new Vector2(blocks * pitch, Gameplay.OpenWorld.CanalHalf * 2), Gameplay.Shapes.Hex(0x2D7FD1));
+            Mark("Station", Gameplay.OpenWorld.Station, new Vector2(12, 12), Color.blue);
+            MapFleer = Box(m, "Escapee", Middle, Vector2.zero, new Vector2(8, 8), Gameplay.Shapes.Hex(0xFF8A00)).rectTransform;
+            MapPolice = Box(m, "Police", Middle, Vector2.zero, new Vector2(8, 8), Gameplay.Shapes.Red).rectTransform;
+            MapPlayer = Box(m, "You", Middle, Vector2.zero, new Vector2(9, 9), Gameplay.Shapes.Cyan).rectTransform;
+            foreach (var r in new[] { MapFleer, MapPolice, MapPlayer }) r.GetComponent<Image>().raycastTarget = false;
+        }
+
+        public static Vector2 MapPoint(Gameplay.OpenWorld world, Vector3 at)
+        {
+            var local = world.transform.InverseTransformPoint(at);
+            return new Vector2(local.x, local.z) * MapScale;
+        }
+
+        void TickMiniMap(Gameplay.OpenWorld world)
+        {
+            var player = world.Player;
+            MapPlayer.anchoredPosition = MapPoint(world, player.position);
+            MapPlayer.localRotation = Quaternion.Euler(0, 0, 45 - player.eulerAngles.y); // a diamond turned to your heading
+            bool police = world.Police.gameObject.activeSelf, fleer = world.Fleer.gameObject.activeSelf;
+            MapPolice.gameObject.SetActive(police);
+            MapFleer.gameObject.SetActive(fleer);
+            if (police) MapPolice.anchoredPosition = MapPoint(world, world.Police.transform.position);
+            if (fleer) MapFleer.anchoredPosition = MapPoint(world, world.Fleer.transform.position);
         }
 
         static RectTransform Rect(string name, Transform parent)
