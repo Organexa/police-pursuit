@@ -43,6 +43,7 @@ namespace PolicePursuit.Gameplay
         public TrafficLights Lights { get; private set; }
         public RoadBlock Block { get; private set; }
         public SpikeStrip Spikes { get; private set; }
+        public CrossroadSpikes JunctionSpikes { get; private set; }
         public bool Punctured { get; private set; } // tyres blown on a spike strip: half speed until you start over
 
         // Wanted level while the police are after you: 1 star, one more every 30 s (the endless run's rule), up to 5.
@@ -222,6 +223,9 @@ namespace PolicePursuit.Gameplay
             Spikes = new GameObject("Spikes").AddComponent<SpikeStrip>();
             Spikes.transform.SetParent(transform, false);
             Spikes.Init();
+            JunctionSpikes = new GameObject("Crossroads spikes").AddComponent<CrossroadSpikes>();
+            JunctionSpikes.transform.SetParent(transform, false);
+            JunctionSpikes.Init();
             Block.Spawned += () => Spikes.Spawn(Block.From, Block.To, 0.5f - RoadBlock.SpikesBefore / Pitch);
             Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
@@ -373,6 +377,7 @@ namespace PolicePursuit.Gameplay
             Police.ResetChase();
             Block.ResetBlock();
             Spikes.ResetStrip();
+            JunctionSpikes.ResetSpikes();
             Punctured = false;
             Car.SpeedLimit = VehicleController.TopSpeed;
             ChaseTime = loseTime = 0;
@@ -450,7 +455,8 @@ namespace PolicePursuit.Gameplay
             // Roadblocks only while the police are actually after you in your car.
             Block.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             Spikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
-            if (!Punctured && !OnFoot && Spikes.Over(Car.transform.position))
+            JunctionSpikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
+            if (!Punctured && !OnFoot && (Spikes.Over(Car.transform.position) || JunctionSpikes.Over(Car.transform.position)))
             {
                 Punctured = true;
                 Car.SpeedLimit = VehicleController.TopSpeed * SpikeStrip.PuncturedScale;

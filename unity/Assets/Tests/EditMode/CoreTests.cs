@@ -562,4 +562,23 @@ public class CoreTests
         Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(4, 0, 7), new Vector3(0, 0, -6) }), "the one in front is in the next lane");
     }
 
+    [Test]
+    public void CrossroadSpikesAlwaysLeaveOneWayOut()
+    {
+        var node = new Vector2Int(2, 2);
+        var north = Vector2Int.up;
+        var open = CrossroadSpikes.Choose(node, north, 0, out var a, out var b);
+        Assert.AreEqual(new Vector2Int(2, 3), a, "straight on is blocked");
+        Assert.IsTrue(b.HasValue, "and one turning");
+        Assert.AreNotEqual(b.Value, open);
+        Assert.AreEqual(1, Mathf.Abs(open.x - node.x) + Mathf.Abs(open.y - node.y), "the open exit is a turning off this crossroads");
+        Assert.AreNotEqual(node - north, open, "never just the way you came");
+        var other = CrossroadSpikes.Choose(node, north, 1, out _, out var b2);
+        Assert.AreEqual(b.Value, other, "the pick swaps which turning stays open");
+        // At the west edge, heading north: only one turning (east) exists, and it stays open.
+        var edge = CrossroadSpikes.Choose(new Vector2Int(0, 2), north, 0, out var a3, out var b3);
+        Assert.AreEqual(new Vector2Int(1, 2), edge);
+        Assert.IsFalse(b3.HasValue);
+    }
+
 }

@@ -8,15 +8,17 @@ namespace PolicePursuit.Gameplay
     public class SpikeStrip : MonoBehaviour
     {
         public const float FirstAfter = 35, Every = 50, MinSpeed = 8, Lasts = 30, ClearBehind = 60;
-        public const float Length = 5, Depth = 0.8f, Inner = 1, PuncturedScale = 0.5f; // metres across from the centre line
+        public const float LaneLength = 5, Depth = 0.8f, Inner = 1, PuncturedScale = 0.5f; // metres across from the centre line
+        public float Length { get; private set; } = LaneLength; // a full-width strip (at crossroads) is longer
         public bool Active => strip.activeSelf;
         public Vector3 Centre { get; private set; }
         public Vector3 Along { get; private set; } // direction of travel the strip faces
         GameObject strip;
         float sinceStart, nextAt = FirstAfter, upSince;
 
-        public void Init()
+        public void Init(float length = LaneLength)
         {
+            Length = length;
             strip = new GameObject("Spike strip");
             strip.transform.SetParent(transform, false);
             for (int i = 0; i < 10; i++) // dark base with bright teeth, readable from a distance at night
@@ -33,13 +35,14 @@ namespace PolicePursuit.Gameplay
         }
 
         // On the right-hand lane of the road from `from` to `to`, `at` of the way along (a third by default).
-        public void Spawn(Vector2Int from, Vector2Int to, float at = 1 / 3f)
+        // fullWidth: across both lanes, centred on the road (used at crossroads, where another exit is left open).
+        public void Spawn(Vector2Int from, Vector2Int to, float at = 1 / 3f, bool fullWidth = false)
         {
             var a = PoliceChase.Centre(from);
             var dir = (PoliceChase.Centre(to) - a).normalized;
             var across = Vector3.Cross(Vector3.up, dir);
             Along = dir;
-            Centre = a + dir * OpenWorld.Pitch * at + across * (Inner + Length / 2);
+            Centre = a + dir * OpenWorld.Pitch * at + (fullWidth ? Vector3.zero : across * (Inner + Length / 2));
             strip.transform.position = transform.TransformPoint(Centre);
             strip.transform.rotation = Quaternion.LookRotation(dir);
             strip.SetActive(true);

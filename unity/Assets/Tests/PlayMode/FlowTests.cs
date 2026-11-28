@@ -1775,4 +1775,44 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator CrossroadSpikesForceATurn()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        var spikes = world.JunctionSpikes;
+        Assert.IsTrue(spikes.Spawn(new Vector2Int(2, 2), Vector2Int.up)); // the centre crossroads, arriving northbound
+        yield return null;
+        Assert.IsTrue(spikes.Active);
+        float lane = PolicePursuit.Gameplay.CivilCar.Lane;
+
+        // Out by the open turning: no puncture.
+        var exit = PolicePursuit.Gameplay.PoliceChase.Centre(spikes.Open);
+        var turnDir = exit.normalized; // from the centre (0,0) towards the open exit
+        var right = Vector3.Cross(Vector3.up, turnDir);
+        var path = new[] { new Vector3(lane, 0.6f, -20), new Vector3(lane, 0.6f, -3), turnDir * 3 + right * lane + Vector3.up * 0.6f, turnDir * 25 + right * lane + Vector3.up * 0.6f };
+        for (int leg = 0; leg < path.Length - 1; leg++)
+            for (float k = 0; k <= 1; k += 0.05f)
+            {
+                world.Car.Place(Vector3.Lerp(path[leg], path[leg + 1], k), 0);
+                yield return null;
+            }
+        Assert.IsFalse(world.Punctured, "the open turning is clear");
+
+        // Straight on: the strip.
+        for (float z = -5; z < 20; z += 0.5f)
+        {
+            world.Car.Place(new Vector3(lane, 0.6f, z), 0);
+            yield return null;
+        }
+        Assert.IsTrue(world.Punctured, "straight on is spiked");
+        world.Police.enabled = true;
+    }
+
 }
