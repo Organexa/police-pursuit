@@ -63,6 +63,25 @@ namespace PolicePursuit.Gameplay
             foreach (var r in brakeLamps) Shapes.Paint(r, on ? Shapes.Red : Shapes.Hex(0x5A0A0A), on ? 2 : 0);
         }
 
+        // Traction control: when a driven (rear) wheel spins faster than the road, ease the engine off until it grips,
+        // then give the power back. Only forward wheelspin under power: sideways slides and handbrake drifts are untouched.
+        // Measured full-throttle starts (km/h at 3 s, mean rear slip): none 42 / 0.97; slip 0.25 30 / 0.22 (below the
+        // tyre's grip peak, too strict); 0.4 43 / 0.35; 0.5 48 / 0.48, kept.
+        public const float TractionSlip = 0.5f, TractionMin = 0.6f, TractionRate = 6; // slip, torque share, per second
+        public float RearSpin { get; private set; } // the larger rear forward slip in the last physics step
+        float traction = 1;
+
+        float TractionControl(float drive, float dt)
+        {
+            float spin = 0;
+            for (int i = 2; i < 4; i++)
+                if (wheels[i].GetGroundHit(out var hit)) spin = Mathf.Max(spin, hit.forwardSlip); // + is spinning
+            RearSpin = spin;
+            bool slipping = drive > 0 && spin > TractionSlip;
+            traction = Mathf.MoveTowards(traction, slipping ? TractionMin : 1, TractionRate * dt);
+            return drive > 0 ? traction : 1;
+        }
+
         // A rear tyre (0 left, 1 right) that is sliding sideways or locked under braking, and where it touches the road.
         // Wheelspin under power never counts: every full-throttle start left a long pair of marks.
         // Measured here (Unity 6000.6, 2026-11-28): forwardSlip is about +1 spinning under power, -1 locked braking.
@@ -165,6 +184,7 @@ namespace PolicePursuit.Gameplay
             bool braking = (pedal < 0 && speed > 1) || (pedal > 0 && speed < -1);
             float drive = braking || Wrecked ? 0 : pedal * MaxTorque * (1 - t); // torque fades towards top speed
             if (pedal < 0 && !braking) drive *= 0.5f; // slower in reverse
+            drive *= TractionControl(drive, Time.fixedDeltaTime);
             float brake = braking ? BrakeTorque * Mathf.Abs(pedal) : 0;
             ShowBrakeLights(braking || Handbrake);
 

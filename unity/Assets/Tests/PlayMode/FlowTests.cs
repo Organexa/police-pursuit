@@ -2074,6 +2074,7 @@ public class FlowTests
         yield return Drive(car, 1, 3); // north along the road from the centre
         Assert.Greater(car.Speed, 8, "up to speed");
         Assert.AreEqual(0, world.Tyres.Showing, "a full-throttle start leaves no marks");
+        Assert.Less(car.RearSpin, 0.7f, "traction control keeps the driven wheels from spinning flat out");
         int puffs = world.Tyres.SmokePuffs;
         for (float t = 0; t < 1.2f; t += Time.deltaTime)
         {
