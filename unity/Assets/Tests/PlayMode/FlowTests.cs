@@ -1847,6 +1847,11 @@ public class FlowTests
         Assert.IsFalse(strip.Falling);
         Assert.IsTrue(strip.Over(strip.Centre), "down on the road");
         Assert.IsFalse(strip.Over(new Vector3(-PolicePursuit.Gameplay.CivilCar.Lane, 0, strip.Centre.z)), "left lane clear");
+
+        world.Heli.Leave(); // chase over or you shook it off
+        yield return null;
+        yield return null;
+        Assert.IsFalse(strip.Active, "its strip goes with it");
         world.Police.enabled = true;
     }
 

@@ -506,7 +506,13 @@ namespace PolicePursuit.Gameplay
 
         void TickHeliDrop(float dt)
         {
-            if (!Heli.gameObject.activeSelf || !Heli.Overhead) { heliOverheadFor = 0; nextHeliDrop = HeliDropFirst; return; }
+            if (!Heli.gameObject.activeSelf || !Heli.Overhead)
+            {
+                heliOverheadFor = 0;
+                nextHeliDrop = HeliDropFirst;
+                HeliSpikes.Clear(); // its strip goes when it does: chase over, or you shook it off
+                return;
+            }
             heliOverheadFor += dt;
             if (HeliSpikes.Active && !HeliSpikes.Falling
                 && Vector3.Dot(Car.transform.position - HeliSpikes.Centre, HeliSpikes.Along) > SpikeStrip.ClearBehind) HeliSpikes.Clear();
