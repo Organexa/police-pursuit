@@ -35,12 +35,12 @@ Each round is one sitting of about 10 minutes. Once every box for a ticket is ti
 - [x] OW35 / OW36 Puddles glow with police lights; driving through one fast splashes.
 
 ## Round 5 — Midnight Prison Break (menu → Prison Break)
-- [ ] OW7 Police side: chase the escapee, stay close until they bail out, then:
-- [ ] OW4 FIRE / RELOAD; the suspect shoots back; you can be put down (start over).
-- [ ] OW5 PUNCH, KICK, three-hit combo, BLOCK, DODGE; spamming is refused.
-- [ ] OW6 Suspect gives up; hold ARREST 2 s; they follow you, get in, deliver at the blue pad → MISSION COMPLETE, 500 coins.
-- [ ] OW14 / OW15 / OW16 SIREN: lights and sound, traffic pulls over, people at corners wait, the escapee speeds up a little.
-- [ ] OW7 Prisoner side: car dies at the green garage, run past the guard to the green safehouse. Also try failing (busted, or time up) and Retry.
+- [x] OW7 Police side: chase the escapee, stay close until they bail out, then:
+- [x] OW4 FIRE / RELOAD; the suspect shoots back; you can be put down (start over).
+- [x] OW5 PUNCH, KICK, three-hit combo, BLOCK, DODGE; spamming is refused.
+- [x] OW6 Suspect gives up; hold ARREST 2 s; they follow you, get in, deliver at the blue pad → MISSION COMPLETE, 500 coins.
+- [x] OW14 / OW15 / OW16 SIREN: lights and sound, traffic pulls over, people at corners wait, the escapee speeds up a little.
+- [x] OW7 Prisoner side: car dies at the green garage, run past the guard to the green safehouse. Also try failing (busted, or time up) and Retry.
 
 ## Everywhere
 - [ ] Frame rate feels smooth; buttons are easy to hit and don't overlap; text is readable.
