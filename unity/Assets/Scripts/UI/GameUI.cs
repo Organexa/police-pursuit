@@ -218,15 +218,16 @@ namespace PolicePursuit.UI
             stick.Knob = Box(pad.transform, "Knob", Middle, Vector2.zero, new Vector2(60, 60), Gameplay.Shapes.Cyan).rectTransform;
             stick.Knob.GetComponent<Image>().raycastTarget = false;
             sprint = Hold(foot, "SPRINT", bottomRight, new Vector2(-16, 16), new Vector2(110, 96));
-            jump = Hold(foot, "JUMP", bottomRight, new Vector2(-138, 16), new Vector2(96, 72));
-            fire = Hold(foot, "FIRE", bottomRight, new Vector2(-16, 124), new Vector2(110, 96));
-            MakeButton(foot, "RELOAD", bottomRight, new Vector2(-138, 100), new Vector2(96, 48), () => game.World.Gun.Reload());
-            ammoText = Label(foot, bottomRight, new Vector2(-16, 230), new Vector2(200, 28), 18, TextAnchor.MiddleRight);
+            // Columns and rows 20 apart (about 4 mm on a phone): closer, a thumb on one button catches its neighbour.
+            jump = Hold(foot, "JUMP", bottomRight, new Vector2(-146, 16), new Vector2(96, 72));
+            fire = Hold(foot, "FIRE", bottomRight, new Vector2(-16, 132), new Vector2(110, 96));
+            MakeButton(foot, "RELOAD", bottomRight, new Vector2(-146, 108), new Vector2(96, 48), () => game.World.Gun.Reload());
+            ammoText = Label(foot, bottomRight, new Vector2(-16, 236), new Vector2(200, 28), 18, TextAnchor.MiddleRight);
             ammoText.raycastTarget = false;
-            MakeButton(foot, "PUNCH", bottomRight, new Vector2(-246, 16), new Vector2(96, 72), () => game.World.Melee.LightAttack());
-            MakeButton(foot, "KICK", bottomRight, new Vector2(-246, 96), new Vector2(96, 56), () => game.World.Melee.HeavyAttack());
-            block = Hold(foot, "BLOCK", bottomRight, new Vector2(-354, 16), new Vector2(96, 72));
-            MakeButton(foot, "DODGE", bottomRight, new Vector2(-138, 156), new Vector2(96, 48), Dodge);
+            MakeButton(foot, "PUNCH", bottomRight, new Vector2(-262, 16), new Vector2(96, 72), () => game.World.Melee.LightAttack());
+            MakeButton(foot, "KICK", bottomRight, new Vector2(-262, 108), new Vector2(96, 56), () => game.World.Melee.HeavyAttack());
+            block = Hold(foot, "BLOCK", bottomRight, new Vector2(-378, 16), new Vector2(96, 72));
+            MakeButton(foot, "DODGE", bottomRight, new Vector2(-146, 176), new Vector2(96, 48), Dodge);
             arrest = Hold(foot, "ARREST", Middle, new Vector2(0, -40), new Vector2(160, 56));
             crosshair = Box(foot, "Crosshair", Middle, new Vector2(0, 40), new Vector2(8, 8), Color.white).gameObject;
             crosshair.GetComponent<Image>().raycastTarget = false;

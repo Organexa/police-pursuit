@@ -55,6 +55,7 @@ namespace PolicePursuit.Gameplay
             InSight = !Physics.Linecast(from, to, out var hit) || hit.transform == Target || (hit.rigidbody != null && hit.rigidbody.transform == Target);
 
             Vector3 goal;
+            bool turnAhead = false;
             if (InSight)
             {
                 goal = Target.position;
@@ -66,9 +67,16 @@ namespace PolicePursuit.Gameplay
                 if (Flat(Centre(next) - transform.position) < NodeReached)
                     next = Step(next, Node(Target.position));
                 goal = Centre(next);
+                var after = Step(next, Node(Target.position));
+                turnAhead = after != next && Vector3.Dot(transform.forward, (Centre(after) - goal).normalized) < 0.7f;
             }
             Steer(car, goal, InSight, Time.deltaTime, ref stuckTime, ref reverseLeft);
+            // Slow down before a crossroads where the route turns: at full speed the car runs wide into a building corner.
+            if (turnAhead && car.Speed > CornerSpeed && Flat(goal - transform.position) < NodeReached + car.Speed * 1.5f)
+                car.Pedal = -0.6f;
         }
+
+        public const float CornerSpeed = 8;
 
         // Shared by every AI car: aim at `goal`, brake for corners, back out when stuck.
         // `gentle` closes in slowly instead of ramming.

@@ -897,7 +897,7 @@ public class FlowTests
 
         world.ToggleSiren(); // the escapee starts 30 m ahead: in earshot
         yield return null;
-        yield return null;
+        yield return new WaitForFixedUpdate(); // the speed cap follows in the driver's physics step
         Assert.IsTrue(world.Fleer.Scared);
         Assert.AreEqual(top * PolicePursuit.Gameplay.FleeDriver.Spooked, flee.SpeedLimit, 0.01f, "drives harder");
         Assert.Less(flee.SpeedLimit, world.Car.SpeedLimit, "still slower than you");
@@ -910,7 +910,7 @@ public class FlowTests
         yield return null;
         world.ToggleSiren();
         yield return null;
-        yield return null;
+        yield return new WaitForFixedUpdate();
         Assert.AreEqual(top * PolicePursuit.Gameplay.FleeDriver.Calm, flee.SpeedLimit, 0.01f, "siren off: calms down");
     }
 
@@ -1953,5 +1953,31 @@ public class FlowTests
         }
         Assert.IsFalse(world.Punctured);
         world.Police.enabled = true;
+    }
+
+    [UnityTest]
+    public IEnumerator OnFootButtonsKeepAThumbsWidthApart()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        Assert.IsTrue(game.World.ExitCar());
+        yield return null;
+
+        // Every bottom-right button showing on foot (pivot = anchor, so the rect follows from position and size).
+        var rects = new System.Collections.Generic.List<(string, Rect)>();
+        foreach (var r in GameObject.Find("RoamHud").GetComponentsInChildren<RectTransform>())
+            if (r.name.StartsWith("Button ") && r.anchorMin == new Vector2(1, 0))
+                rects.Add((r.name, new Rect(r.anchoredPosition.x - r.sizeDelta.x, r.anchoredPosition.y, r.sizeDelta.x, r.sizeDelta.y)));
+        Assert.Greater(rects.Count, 8, "the on-foot buttons are showing");
+        for (int i = 0; i < rects.Count; i++)
+            for (int j = i + 1; j < rects.Count; j++)
+            {
+                var (an, a) = rects[i];
+                var (bn, b) = rects[j];
+                float gap = Mathf.Max(Mathf.Max(a.xMin - b.xMax, b.xMin - a.xMax), Mathf.Max(a.yMin - b.yMax, b.yMin - a.yMax));
+                Assert.GreaterOrEqual(gap, 19.9f, $"{an} and {bn} are too close");
+            }
     }
 }
