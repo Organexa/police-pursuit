@@ -31,8 +31,8 @@ Each round is one sitting of about 10 minutes. Once every box for a ticket is ti
 - [x] OW43 Canal in the south: bridges on the north–south roads, railings keep the car out, a strip on the bridge you head for.
 
 ## Round 4 — Weather (needs ~3 min in one place)
-- [ ] OW34 A shower comes: rain, thicker fog; it washes prints away.
-- [ ] OW35 / OW36 Puddles glow with police lights; driving through one fast splashes.
+- [x] OW34 A shower comes: rain, thicker fog; it washes prints away.
+- [x] OW35 / OW36 Puddles glow with police lights; driving through one fast splashes.
 
 ## Round 5 — Midnight Prison Break (menu → Prison Break)
 - [ ] OW7 Police side: chase the escapee, stay close until they bail out, then:

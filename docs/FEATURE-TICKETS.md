@@ -235,9 +235,9 @@ _Added 2026-11-27 at your request: a second mode next to the endless run, which 
 - OW31 ☑ Out of the water a dog stops 1 s to shake itself dry.
 - OW32 ☑ Wet paw prints for 6 s after a swim (one every 0.6 m, each fading after 3 s; a pool of 20).
 - OW33 ☑ Your wet footprints for 6 s after wading; a dog that lost sight or scent follows the newest it can see within 20 m.
-- OW34 ◐ Passing showers (3 min dry, 90 s rain): rain particles, thicker fog; rain washes all wet prints away.
-- OW35 ◐ Rain puddles (24) glow with nearby flashing police lights (tint, not a real reflection).
-- OW36 ◐ Driving through a puddle over 5 m/s splashes (spray; a sound for your car only).
+- OW34 ☑ Passing showers (3 min dry, 90 s rain): rain particles, thicker fog; rain washes all wet prints away.
+- OW35 ☑ Rain puddles (24) glow with nearby flashing police lights (tint, not a real reflection).
+- OW36 ☑ Driving through a puddle over 5 m/s splashes (spray; a sound for your car only).
 - OW37 ☑ Hide in traffic: crawling (under 8 m/s) with a civilian car close in front and behind in your lane for 3 s loses the helicopter.
 - OW38 ☑ Spike strips (chased by car over 8 m/s; first after 35 s, then every 50 s): across the right-hand lane beyond the next crossroads; the left lane is always clear; driving over halves your top speed until you start over (HUD: TYRES BLOWN).
 - OW39 ☑ Every roadblock comes with a strip across the gap's lane 15 m before the cars: left of the strip, then through the gap.
