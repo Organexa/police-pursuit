@@ -705,6 +705,9 @@ namespace PolicePursuit.Gameplay
             return goal;
         }
 
+        // Puts the camera straight behind the player, e.g. after a teleport (the autotest's screenshots).
+        public void SnapCamera() => Snap();
+
         void Snap()
         {
             if (Car == null) return;

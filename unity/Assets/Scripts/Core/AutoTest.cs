@@ -87,6 +87,15 @@ namespace PolicePursuit.Core
             catch (System.Exception) { } // a file the runner made may not be ours to delete; it is overwritten next time
         }
 
+        IEnumerator ShowAt(OpenWorld world, Vector3 at, float yaw, string shot)
+        {
+            world.Car.Place(at, yaw);
+            yield return new WaitForSeconds(0.5f); // settles on its wheels
+            world.SnapCamera();
+            for (int i = 0; i < 3; i++) yield return null; // motion blur smears the frame right after the camera jump
+            yield return Shot(shot);
+        }
+
         static IEnumerator Hold(VehicleController car, float pedal, float steer, bool handbrake, float seconds)
         {
             for (float t = 0; t < seconds; t += Time.deltaTime)
@@ -157,16 +166,10 @@ namespace PolicePursuit.Core
             int props = 0;
             foreach (Transform t in world.transform) if (t.name == OpenWorld.PropName) props++;
             Check("props", props == 16, $"{props} street props");
-            var park = OpenWorld.ParkCentre;
-            car.Place(new Vector3(park.x, 0.6f, park.z - OpenWorld.Pitch / 2 - 6), 0); // the road south of the park, facing it
-            yield return new WaitForSeconds(0.5f);
-            yield return Shot("park-benches");
-            car.Place(new Vector3(-65, 0.6f, OpenWorld.Pitch + 2), -90); // west along the northern road, hydrant ahead right
-            yield return new WaitForSeconds(0.5f);
-            yield return Shot("street-hydrant");
-            car.Place(new Vector3(-8, 0.6f, 2 * OpenWorld.Pitch + 3), -90); // the northern edge road, wall props ahead right
-            yield return new WaitForSeconds(0.5f);
-            yield return Shot("wall-props");
+            var park = OpenWorld.ParkCentre; // each view: open road behind the car, so the camera is not pulled in by a wall
+            yield return ShowAt(world, new Vector3(OpenWorld.Pitch, 0.6f, park.z - 23), 0, "park-benches"); // east road, looking north past the benches
+            yield return ShowAt(world, new Vector3(-88, 0.6f, OpenWorld.Pitch + 2), -90, "street-hydrant"); // west along the northern road, 3 m short of it
+            yield return ShowAt(world, new Vector3(-8, 0.6f, 2 * OpenWorld.Pitch + 3), -90, "wall-props"); // the northern edge road
 
             // A hard crash into the north wall (x = 0 is a road running up to it).
             car.Place(new Vector3(0, 0.6f, OpenWorld.Edge - 12), 0);
