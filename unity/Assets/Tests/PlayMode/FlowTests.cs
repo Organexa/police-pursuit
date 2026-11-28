@@ -2285,4 +2285,56 @@ public class FlowTests
         Assert.AreEqual(1f, fire.anchorMin.x, "back on the right");
         Assert.AreEqual(1f, fire.localScale.x, 0.001f);
     }
+
+    [UnityTest]
+    public IEnumerator PlayerStateMachineFollowsThePlay()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        yield return null;
+        var world = game.World;
+        world.Police.Target = null;
+        var states = world.States;
+        var seen = new System.Collections.Generic.List<PolicePursuit.Gameplay.PlayerState>();
+        states.Changed += (from, to) => seen.Add(to);
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.Driving, states.State);
+
+        Assert.IsTrue(world.ExitCar());
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.OnFoot, states.State);
+        Assert.Contains(PolicePursuit.Gameplay.PlayerState.ExitingVehicle, seen, "got out through ExitingVehicle");
+        Assert.IsTrue(world.OnFoot && world.Walker.gameObject.activeSelf, "the walker and the state agree");
+
+        Assert.IsTrue(world.Shoot());
+        yield return null;
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.RangedCombat, states.State, "a shot is ranged combat");
+        for (float t = 0; t < PolicePursuit.Gameplay.OpenWorld.ShootingFor + 0.5f && world.Gun.Reloading == false && states.State != PolicePursuit.Gameplay.PlayerState.OnFoot; t += Time.deltaTime) yield return null;
+        for (float t = 0; t < 5 && states.State != PolicePursuit.Gameplay.PlayerState.OnFoot; t += Time.deltaTime) yield return null;
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.OnFoot, states.State, "back to on foot after a moment");
+
+        Assert.IsTrue(world.Melee.LightAttack());
+        yield return null;
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.MeleeCombat, states.State, "a punch is melee combat");
+        Assert.IsFalse(world.CanEnter, "no getting in mid-strike");
+        for (float t = 0; t < 5 && states.State != PolicePursuit.Gameplay.PlayerState.OnFoot; t += Time.deltaTime) yield return null;
+        world.Walker.Place(world.Car.transform.position - world.Car.transform.right * 2f, 0);
+        yield return null;
+        Assert.IsTrue(world.EnterCar());
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.Driving, states.State);
+        Assert.Contains(PolicePursuit.Gameplay.PlayerState.EnteringVehicle, seen, "got in through EnteringVehicle");
+        Assert.IsFalse(world.Walker.gameObject.activeSelf);
+
+        // A mission bust is an end: nothing moves on until a retry.
+        game.StartMission(PolicePursuit.Gameplay.Mission.Role.Prisoner);
+        yield return null;
+        world = game.World;
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.Driving, world.States.State, "a mission starts in the car");
+        world.Mission.End(PolicePursuit.Gameplay.Mission.Outcome.Busted);
+        for (int i = 0; i < 3; i++) yield return null;
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.Captured, world.States.State);
+        Assert.IsFalse(world.ExitCar(), "no getting out once captured");
+        world.ResetCar();
+        Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.Driving, world.States.State, "a fresh start");
+    }
 }

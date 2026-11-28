@@ -148,12 +148,18 @@ namespace PolicePursuit.Gameplay
             : Suspect.Now == Suspect.State.Cuffed ? "Bring the suspect to your car"
             : Suspect.Now == Suspect.State.InCar ? "Drive to the police station"
             : "";
-        public bool OnFoot => Walker.gameObject.activeSelf;
+        // The one record of what the player is doing (milestone 3); OnFoot and the car checks below read it.
+        public PlayerStateMachine States { get; } = new PlayerStateMachine();
+        public const float ShootingFor = 1; // seconds after a shot that count as RangedCombat
+        float lastShotAt = -10;
+        public bool OnFoot => States.OnFoot;
         public Transform Player => OnFoot ? Walker.transform : Car.transform;
         float PlayerSpeed => OnFoot ? Walker.Speed : Mathf.Abs(Car.Speed);
         public const float ExitSpeed = 3, EnterRange = 4; // m/s, metres
-        public bool CanExit => !OnFoot && Mathf.Abs(Car.Speed) < ExitSpeed;
-        public bool CanEnter => OnFoot && !CarLocked && Vector3.Distance(Walker.transform.position, Car.transform.position) < EnterRange;
+        public bool CanExit => States.InCar && Mathf.Abs(Car.Speed) < ExitSpeed;
+        // Not mid-strike: a punch or kick has to finish before you can get in.
+        public bool CanEnter => OnFoot && States.State != PlayerState.MeleeCombat && !CarLocked
+            && Vector3.Distance(Walker.transform.position, Car.transform.position) < EnterRange;
         public float LookYaw { get; set; } // camera turn on foot, degrees
         public float PoliceDistance => Mathf.Min(Vector3.Distance(Player.position, Police.transform.position), Block.ChaserDistance(Player.position));
         public float BustProgress => bustTime / BustTime; // 0..1 while the police are pulling you over
@@ -227,6 +233,7 @@ namespace PolicePursuit.Gameplay
             PlayerHealth.Downed += () =>
             {
                 Downs++;
+                States.Go(PlayerState.Incapacitated);
                 if (Mission != null) Mission.End(Mission.Outcome.Incapacitated);
                 else ResetCar(); // incapacitated: start over, no injury shown
             };
@@ -365,7 +372,9 @@ namespace PolicePursuit.Gameplay
         {
             if (!OnFoot || Melee.Busy || Melee.Blocking) return false;
             var aim = Walker.Move.sqrMagnitude > 0.01f ? Walker.transform.forward : Quaternion.Euler(0, LookYaw, 0) * Vector3.forward;
-            return Gun.Fire(aim);
+            if (!Gun.Fire(aim)) return false;
+            lastShotAt = Time.time;
+            return true;
         }
 
         // Out of the driver's side if there is room, else the other side, else behind. False when boxed in or moving.
@@ -381,6 +390,8 @@ namespace PolicePursuit.Gameplay
                 if (Physics.CheckCapsule(low, high, Walker.Radius)) continue;
                 Car.Pedal = Car.Steer = 0;
                 Car.Handbrake = true; // parked
+                States.Go(PlayerState.ExitingVehicle);
+                States.Go(PlayerState.OnFoot);
                 Walker.gameObject.SetActive(true);
                 Walker.Place(feet, t.eulerAngles.y);
                 LookYaw = t.eulerAngles.y;
@@ -393,6 +404,9 @@ namespace PolicePursuit.Gameplay
         public bool EnterCar()
         {
             if (!CanEnter) return false;
+            States.Go(PlayerState.OnFoot); // out of a shot or an arrest first
+            States.Go(PlayerState.EnteringVehicle);
+            States.Go(PlayerState.Driving);
             Walker.gameObject.SetActive(false);
             Car.Handbrake = false;
             Police.Target = Car.transform;
@@ -472,6 +486,7 @@ namespace PolicePursuit.Gameplay
 
         public void ResetCar()
         {
+            States.Reset(PlayerState.Driving);
             Walker.gameObject.SetActive(false);
             CarLocked = false;
             PlayerHealth.Restore();
@@ -520,7 +535,7 @@ namespace PolicePursuit.Gameplay
                 Dog.Release(new Vector3(car.position.x, 0.1f, car.position.z) - car.right * 2, Walker.transform, Melee, Footprints);
             if (!Dog.Holding) return false;
             Busts++;
-            if (Mission != null) Mission.End(Mission.Outcome.Busted);
+            if (Mission != null) { States.Go(PlayerState.Captured); Mission.End(Mission.Outcome.Busted); }
             else ResetCar();
             return true;
         }
@@ -662,7 +677,7 @@ namespace PolicePursuit.Gameplay
             bustTime = held ? bustTime + Time.deltaTime : 0;
             if (bustTime < BustTime) return;
             Busts++;
-            if (Mission != null) Mission.End(Mission.Outcome.Busted);
+            if (Mission != null) { States.Go(PlayerState.Captured); Mission.End(Mission.Outcome.Busted); }
             else ResetCar();
         }
 
@@ -724,6 +739,8 @@ namespace PolicePursuit.Gameplay
                 Mission.Tick(this, Time.deltaTime);
                 if (Mission.Result != Mission.Outcome.None && !reported)
                 {
+                    States.Go(Mission.Result == Mission.Outcome.Busted ? PlayerState.Captured
+                        : Mission.Result == Mission.Outcome.Incapacitated ? PlayerState.Incapacitated : PlayerState.MissionComplete);
                     reported = true;
                     MissionEnded?.Invoke(Mission);
                 }
@@ -732,6 +749,7 @@ namespace PolicePursuit.Gameplay
             if (Sky.Raining) { Footprints.Clear(); Dog.WashPrints(); } // rain washes every wet print away at once
             Puddles.Show(Sky.Raining);
             Footprints.Tick(Walker.transform, Time.deltaTime); // also in the car, so old prints still fade
+            States.SettleOnFoot(Melee.Busy || Melee.Blocking, Gun.Reloading || Time.time - lastShotAt < ShootingFor, cuffTime > 0);
             if (OnFoot)
             {
                 if (Melee.Busy || Melee.Blocking) Walker.Move = Vector2.zero; // planted while striking or guarding

@@ -607,4 +607,43 @@ public class CoreTests
         }
         Assert.AreEqual(Sound.GearPitch(10, top), Sound.GearPitch(-10, top), 1e-4f, "reversing sounds like first gear forward");
     }
+
+    [Test]
+    public void PlayerStatesOnlyChangeAlongTheirRules()
+    {
+        var s = new PlayerStateMachine();
+        var seen = new System.Collections.Generic.List<PlayerState>();
+        s.Changed += (from, to) => seen.Add(to);
+        Assert.AreEqual(PlayerState.Driving, s.State);
+        Assert.IsTrue(s.InCar);
+
+        Assert.IsFalse(s.Go(PlayerState.OnFoot), "out of the car only through ExitingVehicle");
+        Assert.IsFalse(s.Go(PlayerState.MeleeCombat), "no punching from the driver's seat");
+        Assert.IsTrue(s.Go(PlayerState.ExitingVehicle));
+        Assert.IsTrue(s.Go(PlayerState.OnFoot));
+        Assert.IsTrue(s.OnFoot);
+        CollectionAssert.AreEqual(new[] { PlayerState.ExitingVehicle, PlayerState.OnFoot }, seen, "every step is announced");
+
+        Assert.IsTrue(s.Go(PlayerState.MeleeCombat));
+        Assert.IsTrue(s.OnFoot, "fighting is still on foot");
+        Assert.IsFalse(s.Go(PlayerState.RangedCombat), "no shot straight out of a strike");
+        Assert.IsFalse(s.Go(PlayerState.EnteringVehicle), "no getting in mid-strike");
+        s.SettleOnFoot(striking: false, shooting: true, arresting: false);
+        Assert.AreEqual(PlayerState.RangedCombat, s.State, "settling goes through OnFoot");
+        s.SettleOnFoot(false, false, true);
+        Assert.AreEqual(PlayerState.Arresting, s.State, "an arrest outranks a shot");
+        s.SettleOnFoot(false, false, false);
+        Assert.AreEqual(PlayerState.OnFoot, s.State);
+
+        Assert.IsTrue(s.Go(PlayerState.Captured));
+        Assert.IsTrue(s.Ended);
+        Assert.IsFalse(s.OnFoot);
+        foreach (PlayerState next in System.Enum.GetValues(typeof(PlayerState)))
+            if (next != PlayerState.Captured) Assert.IsFalse(s.Go(next), $"an end holds: no {next}");
+        s.SettleOnFoot(true, true, true);
+        Assert.AreEqual(PlayerState.Captured, s.State, "settling never leaves an end");
+
+        s.Reset();
+        Assert.AreEqual(PlayerState.Driving, s.State, "a fresh start");
+    }
 }
