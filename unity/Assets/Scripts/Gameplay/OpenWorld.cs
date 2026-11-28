@@ -46,6 +46,11 @@ namespace PolicePursuit.Gameplay
         public CrossroadSpikes JunctionSpikes { get; private set; }
         // The helicopter drops its own strip ahead of you while it can see you driving fast.
         public SpikeStrip HeliSpikes { get; private set; }
+        // Drive into the tunnel with the police after you and they lay a strip at the far end.
+        public SpikeStrip TunnelSpikes { get; private set; }
+        public const float TunnelSpikesRest = 30, TunnelSpikesAt = 48; // seconds between; metres from the entry crossroads
+        float noTunnelSpikesUntil;
+        bool wasInTunnel;
         public const float HeliDropFirst = 10, HeliDropEvery = 40, HeliDropSpeed = 8;
         float heliOverheadFor, nextHeliDrop = HeliDropFirst;
         public bool Punctured { get; private set; } // tyres blown on a spike strip: half speed until you start over
@@ -233,6 +238,9 @@ namespace PolicePursuit.Gameplay
             HeliSpikes = new GameObject("Helicopter spikes").AddComponent<SpikeStrip>();
             HeliSpikes.transform.SetParent(transform, false);
             HeliSpikes.Init();
+            TunnelSpikes = new GameObject("Tunnel spikes").AddComponent<SpikeStrip>();
+            TunnelSpikes.transform.SetParent(transform, false);
+            TunnelSpikes.Init();
             Block.Spawned += () => Spikes.Spawn(Block.From, Block.To, 0.5f - RoadBlock.SpikesBefore / Pitch);
             Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
@@ -386,6 +394,9 @@ namespace PolicePursuit.Gameplay
             Spikes.ResetStrip();
             JunctionSpikes.ResetSpikes();
             HeliSpikes.Clear();
+            TunnelSpikes.Clear();
+            noTunnelSpikesUntil = 0;
+            wasInTunnel = false;
             heliOverheadFor = 0;
             nextHeliDrop = HeliDropFirst;
             Punctured = false;
@@ -420,6 +431,26 @@ namespace PolicePursuit.Gameplay
         // Out of every way the police have of knowing where you are.
         public static bool Hidden(float policeDistance, bool policeSee, bool inSearchlight, bool dogBarking) =>
             policeDistance > LoseRange && !policeSee && !inSearchlight && !dogBarking;
+
+        void TickTunnelSpikes(bool chased)
+        {
+            if (TunnelSpikes.Active && (!chased || Vector3.Dot(Car.transform.position - TunnelSpikes.Centre, TunnelSpikes.Along) > SpikeStrip.ClearBehind))
+                TunnelSpikes.Clear();
+            bool inside = !OnFoot && InTunnel(Car.transform.position);
+            if (inside && !wasInTunnel && chased && Time.time >= noTunnelSpikesUntil) SpikeTunnelExit(Car.transform.forward);
+            wasInTunnel = inside;
+        }
+
+        // The far end for a car heading `heading` through the tunnel; right-hand lane, as every strip.
+        public void SpikeTunnelExit(Vector3 heading)
+        {
+            var dir = PoliceChase.Centre(TunnelTo) - PoliceChase.Centre(TunnelFrom);
+            bool north = Vector3.Dot(heading, dir) >= 0;
+            var from = north ? TunnelFrom : TunnelTo;
+            var to = north ? TunnelTo : TunnelFrom;
+            TunnelSpikes.Spawn(from, to, TunnelSpikesAt / Pitch);
+            noTunnelSpikesUntil = Time.time + TunnelSpikesRest;
+        }
 
         void TickHeliDrop(float dt)
         {
@@ -486,8 +517,9 @@ namespace PolicePursuit.Gameplay
             Spikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             JunctionSpikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             TickHeliDrop(Time.deltaTime);
+            TickTunnelSpikes(Police.gameObject.activeSelf && Police.Target != null && !OnFoot);
             if (!Punctured && !OnFoot && (Spikes.Over(Car.transform.position) || JunctionSpikes.Over(Car.transform.position)
-                                          || HeliSpikes.Over(Car.transform.position)))
+                                          || HeliSpikes.Over(Car.transform.position) || TunnelSpikes.Over(Car.transform.position)))
             {
                 Punctured = true;
                 Car.SpeedLimit = VehicleController.TopSpeed * SpikeStrip.PuncturedScale;

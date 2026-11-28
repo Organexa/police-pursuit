@@ -1850,4 +1850,47 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator PoliceSpikeTheFarEndOfTheTunnel()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        var a = PolicePursuit.Gameplay.PoliceChase.Centre(PolicePursuit.Gameplay.OpenWorld.TunnelFrom); // south end, (-54, 0)
+        var b = PolicePursuit.Gameplay.PoliceChase.Centre(PolicePursuit.Gameplay.OpenWorld.TunnelTo);   // north end, (-54, 54)
+        float lane = PolicePursuit.Gameplay.CivilCar.Lane;
+
+        // Northbound into the tunnel.
+        for (float z = a.z - 5; z < a.z + 15; z += 0.5f)
+        {
+            world.Car.Place(new Vector3(a.x + lane, 0.6f, z), 0);
+            yield return null;
+        }
+        var strip = world.TunnelSpikes;
+        Assert.IsTrue(strip.Active, "spikes at the tunnel's far end");
+        Assert.Greater(strip.Centre.z, b.z - 10, "at the north end, the way you are going");
+        Assert.Greater(strip.Centre.x, a.x, "right-hand lane");
+        Assert.IsFalse(strip.Over(new Vector3(a.x - lane, 0, strip.Centre.z)), "the left lane out is clear");
+        Assert.IsFalse(world.Punctured);
+
+        // Southbound from the other end, after the rest: the strip goes at the south end instead.
+        world.Restart();
+        world.Police.enabled = false;
+        police.Pedal = police.Steer = 0;
+        for (float z = b.z + 5; z > b.z - 15; z -= 0.5f)
+        {
+            world.Car.Place(new Vector3(b.x - lane, 0.6f, z), 180);
+            yield return null;
+        }
+        Assert.IsTrue(world.TunnelSpikes.Active);
+        Assert.Less(world.TunnelSpikes.Centre.z, a.z + 10, "southbound: at the south end");
+        Assert.Less(world.TunnelSpikes.Centre.x, a.x, "your right-hand lane going south");
+        world.Police.enabled = true;
+    }
+
 }
