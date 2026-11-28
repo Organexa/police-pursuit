@@ -418,19 +418,56 @@ namespace PolicePursuit.Gameplay
 
         void ParkPoliceCars()
         {
-            var model = Resources.Load<GameObject>("ParkedPoliceCar/police-car");
-            if (model == null) return;
+            var car = Resources.Load<GameObject>("ParkedPoliceCar/police-car");
+            var dumpster = Resources.Load<GameObject>("Props/dumpster/dumpster");
+            var barrier = Resources.Load<GameObject>("Props/barrier/barrier");
             for (int side = 0; side < 4; side++)
-            for (int i = side % 2; i < Blocks; i += 2)
+            for (int i = 0; i < Blocks; i++)
             {
                 var outward = Quaternion.Euler(0, side * 90, 0) * Vector3.forward;
                 var along = Quaternion.Euler(0, 90, 0) * outward;
-                var car = Instantiate(model, transform);
-                car.name = ParkedCarName;
-                car.transform.localPosition = outward * ParkedStrip + along * ((i - Blocks / 2f + 0.5f) * Pitch);
-                car.transform.localRotation = Quaternion.LookRotation(i < Blocks / 2 ? along : -along);
-                car.GetComponentInChildren<MeshFilter>().gameObject.AddComponent<BoxCollider>(); // fits the mesh
+                var pos = outward * ParkedStrip + along * ((i - Blocks / 2f + 0.5f) * Pitch);
+                var facing = i < Blocks / 2 ? along : -along;
+                // Parked police cars on every other block; a dumpster or a road barrier in each spot left between them.
+                bool parked = i % 2 == side % 2;
+                Place(parked ? car : i % 4 < 2 ? dumpster : barrier, parked ? ParkedCarName : PropName, pos, facing);
             }
+            PlaceStreetProps();
+        }
+
+        // ComfyUI/TripoSR props (tools/comfy_3d.py, game_mesh.py), each kept off every road, crossing and walkway:
+        // benches in the park between the pond and its fence, and fire hydrants against building walls on the
+        // northern east-west road, 10 m either side of mid-block (roadblocks stand at mid-block; spike strips reach
+        // 6 m from the road centre, the hydrants sit 6.7 m out; walkers pass 1 m from the wall, the hydrants 0.3 m).
+        public const string PropName = "Street prop";
+        public const float BenchFromPond = 16.75f, HydrantFromWall = 0.3f, HydrantAlong = 10;
+
+        void PlaceStreetProps()
+        {
+            var bench = Resources.Load<GameObject>("Props/bench/bench");
+            var hydrant = Resources.Load<GameObject>("Props/hydrant/hydrant");
+            var park = ParkCentre;
+            foreach (float x in new[] { -6f, 6f })
+                Place(bench, PropName, park + new Vector3(x, 0, -BenchFromPond), Vector3.right); // south side
+            foreach (float z in new[] { -6f, 6f })
+                Place(bench, PropName, park + new Vector3(BenchFromPond, 0, z), Vector3.forward); // east side
+            float half = (Pitch - Road) / 2; // building edge from its block centre
+            for (int x = 0; x < Blocks; x++)
+            {
+                float blockX = (x - Blocks / 2f + 0.5f) * Pitch, blockZ = (Blocks - 1 - Blocks / 2f + 0.5f) * Pitch;
+                var at = new Vector3(blockX + (x % 2 == 0 ? -HydrantAlong : HydrantAlong), 0, blockZ - half - HydrantFromWall);
+                Place(hydrant, PropName, at, Vector3.forward);
+            }
+        }
+
+        void Place(GameObject model, string name, Vector3 pos, Vector3 facing)
+        {
+            if (model == null) return;
+            var go = Instantiate(model, transform);
+            go.name = name;
+            go.transform.localPosition = pos;
+            go.transform.localRotation = Quaternion.LookRotation(facing);
+            go.GetComponentInChildren<MeshFilter>().gameObject.AddComponent<BoxCollider>(); // fits the mesh
         }
 
         public void ResetCar()

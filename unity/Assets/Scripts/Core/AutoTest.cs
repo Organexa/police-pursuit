@@ -153,6 +153,21 @@ namespace PolicePursuit.Core
                 Check("enter-car", world.EnterCar());
             }
 
+            // Props (ComfyUI/TripoSR models): all placed, and seen on the device.
+            int props = 0;
+            foreach (Transform t in world.transform) if (t.name == OpenWorld.PropName) props++;
+            Check("props", props == 16, $"{props} street props");
+            var park = OpenWorld.ParkCentre;
+            car.Place(new Vector3(park.x, 0.6f, park.z - OpenWorld.Pitch / 2 - 6), 0); // the road south of the park, facing it
+            yield return new WaitForSeconds(0.5f);
+            yield return Shot("park-benches");
+            car.Place(new Vector3(-65, 0.6f, OpenWorld.Pitch + 2), -90); // west along the northern road, hydrant ahead right
+            yield return new WaitForSeconds(0.5f);
+            yield return Shot("street-hydrant");
+            car.Place(new Vector3(-8, 0.6f, 2 * OpenWorld.Pitch + 3), -90); // the northern edge road, wall props ahead right
+            yield return new WaitForSeconds(0.5f);
+            yield return Shot("wall-props");
+
             // A hard crash into the north wall (x = 0 is a road running up to it).
             car.Place(new Vector3(0, 0.6f, OpenWorld.Edge - 12), 0);
             yield return new WaitForFixedUpdate();

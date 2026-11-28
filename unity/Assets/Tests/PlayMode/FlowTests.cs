@@ -2121,4 +2121,67 @@ public class FlowTests
         Assert.AreEqual(1f, Time.timeScale, "time runs again after each screenshot");
         Object.Destroy(test.gameObject);
     }
+
+    [UnityTest]
+    public IEnumerator StreetPropsStayOffRoadsWalkwaysAndThePond()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        yield return null;
+        var world = game.World;
+        const float road = PolicePursuit.Gameplay.OpenWorld.Road, pitch = PolicePursuit.Gameplay.OpenWorld.Pitch;
+        const int blocks = PolicePursuit.Gameplay.OpenWorld.Blocks;
+        float wall = PolicePursuit.Gameplay.OpenWorld.Edge - 0.5f, walk = PolicePursuit.Gameplay.Pedestrian.WalkHalf;
+        var park = PolicePursuit.Gameplay.OpenWorld.ParkCentre;
+        int strip = 0, benches = 0, hydrants = 0;
+        foreach (Transform t in world.transform)
+        {
+            if (t.name != PolicePursuit.Gameplay.OpenWorld.PropName) continue;
+            Assert.IsNotNull(t.GetComponentInChildren<Renderer>().sharedMaterial.mainTexture, "textured");
+            var b = t.GetComponentInChildren<Collider>().bounds;
+            b.center -= world.transform.position;
+            Assert.Less(Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x), Mathf.Abs(b.min.z), Mathf.Abs(b.max.z)), wall, "inside the walls");
+
+            // Off every road band, except the hydrants, which stand at the wall beyond the spike-strip zone.
+            float nearestEW = float.MaxValue, nearestNS = float.MaxValue;
+            for (int i = 0; i <= blocks; i++)
+            {
+                float at = (i - blocks / 2f) * pitch;
+                nearestEW = Mathf.Min(nearestEW, Mathf.Max(0, Mathf.Abs(b.center.z - at) - b.extents.z));
+                nearestNS = Mathf.Min(nearestNS, Mathf.Max(0, Mathf.Abs(b.center.x - at) - b.extents.x));
+            }
+            bool inPark = Mathf.Abs(b.center.x - park.x) < pitch / 2 && Mathf.Abs(b.center.z - park.z) < pitch / 2;
+            if (inPark)
+            {
+                benches++;
+                Assert.Less(Mathf.Max(Mathf.Abs(b.max.x - park.x), Mathf.Abs(b.min.x - park.x), Mathf.Abs(b.max.z - park.z),
+                    Mathf.Abs(b.min.z - park.z)), PolicePursuit.Gameplay.OpenWorld.FenceHalf, "inside the park fence");
+                Assert.IsFalse(PolicePursuit.Gameplay.OpenWorld.InWater(b.center), "not in the pond");
+            }
+            else if (nearestEW < road / 2 || nearestNS < road / 2)
+            {
+                hydrants++;
+                Assert.GreaterOrEqual(Mathf.Min(nearestEW, nearestNS), 6f, "beyond the lane spike strips (6 m out)");
+                float midBlock = Mathf.Abs(Mathf.Repeat(b.center.x, pitch) - pitch / 2);
+                Assert.Greater(midBlock, 4, "clear of a roadblock at mid-block");
+            }
+            else strip++;
+
+            // Not on the pedestrians' walking ring round the nearest block.
+            var block = new Vector3((Mathf.Floor(b.center.x / pitch) + 0.5f) * pitch, 0, (Mathf.Floor(b.center.z / pitch) + 0.5f) * pitch);
+            float near = float.MaxValue, far = 0;
+            foreach (var c in new[] { new Vector2(b.min.x, b.min.z), new Vector2(b.min.x, b.max.z), new Vector2(b.max.x, b.min.z), new Vector2(b.max.x, b.max.z) })
+            {
+                float d = Mathf.Max(Mathf.Abs(c.x - block.x), Mathf.Abs(c.y - block.z));
+                near = Mathf.Min(near, d);
+                far = Mathf.Max(far, d);
+            }
+            Assert.IsTrue(far < walk - 0.25f || near > walk + 0.25f, $"{t.name} at {b.center} is off the walkway");
+        }
+        Assert.AreEqual(8, strip, "a dumpster or barrier in each free spot by the wall");
+        Assert.AreEqual(4, benches, "benches in the park");
+        Assert.AreEqual(4, hydrants, "hydrants by the buildings");
+    }
 }
