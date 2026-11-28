@@ -212,6 +212,7 @@ namespace PolicePursuit.Gameplay
                 var size = side % 2 == 0 ? new Vector3(Edge * 2, 3, 1) : new Vector3(1, 3, Edge * 2);
                 Solid(dir * Edge + Vector3.up * 1.5f, size, Shapes.Magenta).name = "Wall";
             }
+            ParkPoliceCars();
 
             Car = VehicleController.Create(transform, Spawn, Shapes.Cyan);
             Police = VehicleController.Create(transform, PoliceSpawn, Color.white, police: true).gameObject.AddComponent<PoliceChase>();
@@ -404,6 +405,29 @@ namespace PolicePursuit.Gameplay
             var go = Shapes.Box(transform, pos, size, colour);
             go.AddComponent<BoxCollider>(); // Shapes strips colliders; the open world needs them
             return go;
+        }
+
+        // Parked police cars (a ComfyUI/TripoSR model) in the strip between the outer roads and the wall, 115 to
+        // 117.5 m out: off every road, so traffic, roadblock gaps and spike strips never meet them. Mid-block only,
+        // clear of the roads that run into the wall; every other block, alternating round the district.
+        public const string ParkedCarName = "Parked police car";
+        public static float ParkedStrip => (Blocks / 2f * Pitch + Road / 2 + Edge - 0.5f) / 2;
+
+        void ParkPoliceCars()
+        {
+            var model = Resources.Load<GameObject>("ParkedPoliceCar/police-car");
+            if (model == null) return;
+            for (int side = 0; side < 4; side++)
+            for (int i = side % 2; i < Blocks; i += 2)
+            {
+                var outward = Quaternion.Euler(0, side * 90, 0) * Vector3.forward;
+                var along = Quaternion.Euler(0, 90, 0) * outward;
+                var car = Instantiate(model, transform);
+                car.name = ParkedCarName;
+                car.transform.localPosition = outward * ParkedStrip + along * ((i - Blocks / 2f + 0.5f) * Pitch);
+                car.transform.localRotation = Quaternion.LookRotation(i < Blocks / 2 ? along : -along);
+                car.GetComponentInChildren<MeshFilter>().gameObject.AddComponent<BoxCollider>(); // fits the mesh
+            }
         }
 
         public void ResetCar()

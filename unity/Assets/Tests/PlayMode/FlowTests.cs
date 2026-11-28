@@ -1980,4 +1980,37 @@ public class FlowTests
                 Assert.GreaterOrEqual(gap, 19.9f, $"{an} and {bn} are too close");
             }
     }
+
+    [UnityTest]
+    public IEnumerator ParkedPoliceCarsSitOffEveryRoad()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        yield return null;
+        var world = game.World;
+        var cars = new System.Collections.Generic.List<Transform>();
+        foreach (Transform t in world.transform)
+            if (t.name == PolicePursuit.Gameplay.OpenWorld.ParkedCarName) cars.Add(t);
+        Assert.AreEqual(8, cars.Count, "eight parked police cars");
+
+        const float road = PolicePursuit.Gameplay.OpenWorld.Road, pitch = PolicePursuit.Gameplay.OpenWorld.Pitch;
+        float wall = PolicePursuit.Gameplay.OpenWorld.Edge - 0.5f;
+        foreach (var car in cars)
+        {
+            var r = car.GetComponentInChildren<Renderer>();
+            Assert.IsNotNull(r.sharedMaterial.mainTexture, "textured");
+            var b = car.GetComponentInChildren<Collider>().bounds; // the player bumps into them
+            b.center -= world.transform.position;
+            Assert.Less(Mathf.Max(Mathf.Abs(b.min.x), Mathf.Abs(b.max.x), Mathf.Abs(b.min.z), Mathf.Abs(b.max.z)), wall, "inside the walls");
+            for (int i = 0; i <= PolicePursuit.Gameplay.OpenWorld.Blocks; i++)
+            {
+                float at = (i - PolicePursuit.Gameplay.OpenWorld.Blocks / 2f) * pitch;
+                bool onX = b.min.x < at + road / 2 && b.max.x > at - road / 2; // the roads run from wall to wall
+                bool onZ = b.min.z < at + road / 2 && b.max.z > at - road / 2;
+                Assert.IsFalse(onX || onZ, $"{car.name} at {b.center} is off every road");
+            }
+        }
+    }
 }
