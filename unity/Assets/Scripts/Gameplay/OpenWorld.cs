@@ -48,6 +48,10 @@ namespace PolicePursuit.Gameplay
         public SpikeStrip HeliSpikes { get; private set; }
         // Drive into the tunnel with the police after you and they lay a strip at the far end.
         public SpikeStrip TunnelSpikes { get; private set; }
+        // Heading for a canal bridge with the police after you: a strip on its right-hand lane.
+        public SpikeStrip BridgeSpikes { get; private set; }
+        public const float BridgeSpikesNear = 20, BridgeSpikesFar = 45, BridgeSpikesRest = 30;
+        float noBridgeSpikesUntil;
         public const float TunnelSpikesRest = 30, TunnelSpikesAt = 48; // seconds between; metres from the entry crossroads
         float noTunnelSpikesUntil;
         bool wasInTunnel;
@@ -77,7 +81,15 @@ namespace PolicePursuit.Gameplay
         // Low fences on the park's north and west sides: you can jump them, a police dog cannot.
         public const float FenceHeight = 0.7f, FenceInset = 0.5f;
         public static float FenceHalf => (Pitch - Road) / 2 - FenceInset; // from the park centre
-        public static bool InWater(Vector3 p) => Mathf.Abs(p.x - ParkCentre.x) < PondHalf && Mathf.Abs(p.z - ParkCentre.z) < PondHalf;
+        // A canal east to west through the southern row of blocks; the five north-south roads cross it on bridges.
+        // Low railings (the park fences' height) line both banks: cars stay out, you can jump in, dogs cannot.
+        public const int CanalRow = 0;
+        public const float CanalHalf = 5;
+        public static float CanalZ => (CanalRow - Blocks / 2f + 0.5f) * Pitch;
+        public static bool OnBridge(Vector3 p) => Mathf.Abs(p.x - Mathf.Round(p.x / Pitch) * Pitch) < Road / 2;
+        public static bool InCanal(Vector3 p) => Mathf.Abs(p.z - CanalZ) < CanalHalf && !OnBridge(p) && Mathf.Abs(p.x) < Blocks / 2f * Pitch;
+        public static bool InWater(Vector3 p) =>
+            (Mathf.Abs(p.x - ParkCentre.x) < PondHalf && Mathf.Abs(p.z - ParkCentre.z) < PondHalf) || InCanal(p);
 
         // One covered road: from the west-centre crossroads north to the next one. The helicopter cannot see into it.
         public static readonly Vector2Int TunnelFrom = new Vector2Int(1, 2), TunnelTo = new Vector2Int(1, 3);
@@ -176,6 +188,20 @@ namespace PolicePursuit.Gameplay
                     Solid(new Vector3(centre.x - f, FenceHeight / 2, centre.z), new Vector3(0.15f, FenceHeight, len), Shapes.Hex(0x8A8F99)).name = "Fence west";
                     continue;
                 }
+                if (z == CanalRow)
+                {
+                    // Two buildings with the canal between them, railings along both banks.
+                    float side = Pitch - Road, half = side / 2, top = centre.z + half, bottom = centre.z - half;
+                    float north = top - (CanalZ + CanalHalf), south = (CanalZ - CanalHalf) - bottom;
+                    var nb = Solid(new Vector3(centre.x, h / 2, top - north / 2), new Vector3(side, h, north), Shapes.Navy);
+                    var sb = Solid(new Vector3(centre.x, h * 0.4f, bottom + south / 2), new Vector3(side, h * 0.8f, south), Shapes.Navy);
+                    Shapes.LightWindows(nb.GetComponent<Renderer>());
+                    Shapes.LightWindows(sb.GetComponent<Renderer>());
+                    Shapes.Box(transform, new Vector3(centre.x, 0.05f, CanalZ), new Vector3(side, 0.04f, CanalHalf * 2), Shapes.Hex(0x1C4E80), glow: 0.3f).name = "Canal";
+                    foreach (float bank in new[] { CanalZ + CanalHalf, CanalZ - CanalHalf })
+                        Solid(new Vector3(centre.x, FenceHeight / 2, bank), new Vector3(side, FenceHeight, 0.15f), Shapes.Hex(0x8A8F99)).name = "Canal railing";
+                    continue;
+                }
                 var b = Solid(centre, new Vector3(Pitch - Road, h, Pitch - Road), Shapes.Navy);
                 Shapes.LightWindows(b.GetComponent<Renderer>());
             }
@@ -241,6 +267,9 @@ namespace PolicePursuit.Gameplay
             TunnelSpikes = new GameObject("Tunnel spikes").AddComponent<SpikeStrip>();
             TunnelSpikes.transform.SetParent(transform, false);
             TunnelSpikes.Init();
+            BridgeSpikes = new GameObject("Bridge spikes").AddComponent<SpikeStrip>();
+            BridgeSpikes.transform.SetParent(transform, false);
+            BridgeSpikes.Init();
             Block.Spawned += () => Spikes.Spawn(Block.From, Block.To, 0.5f - RoadBlock.SpikesBefore / Pitch);
             Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
@@ -396,6 +425,8 @@ namespace PolicePursuit.Gameplay
             HeliSpikes.Clear();
             TunnelSpikes.Clear();
             noTunnelSpikesUntil = 0;
+            BridgeSpikes.Clear();
+            noBridgeSpikesUntil = 0;
             wasInTunnel = false;
             heliOverheadFor = 0;
             nextHeliDrop = HeliDropFirst;
@@ -431,6 +462,27 @@ namespace PolicePursuit.Gameplay
         // Out of every way the police have of knowing where you are.
         public static bool Hidden(float policeDistance, bool policeSee, bool inSearchlight, bool dogBarking) =>
             policeDistance > LoseRange && !policeSee && !inSearchlight && !dogBarking;
+
+        void TickBridgeSpikes(bool chased)
+        {
+            var p = Car.transform.position;
+            if (BridgeSpikes.Active && (!chased || Vector3.Dot(p - BridgeSpikes.Centre, BridgeSpikes.Along) > SpikeStrip.ClearBehind))
+                BridgeSpikes.Clear();
+            if (BridgeSpikes.Active || !chased || Time.time < noBridgeSpikesUntil || !OnBridge(p)) return;
+            float toCanal = CanalZ - p.z;
+            if (Mathf.Abs(toCanal) < BridgeSpikesNear || Mathf.Abs(toCanal) > BridgeSpikesFar) return;
+            if (Car.transform.forward.z * toCanal <= 0) return; // driving away from it
+            SpikeBridge(Mathf.RoundToInt(p.x / Pitch + Blocks / 2f), toCanal < 0);
+        }
+
+        // The bridge on north-south road `line`, approached from the north (true) or the south.
+        public void SpikeBridge(int line, bool fromNorth)
+        {
+            var north = new Vector2Int(line, CanalRow + 1);
+            var south = new Vector2Int(line, CanalRow);
+            BridgeSpikes.Spawn(fromNorth ? north : south, fromNorth ? south : north, 0.5f);
+            noBridgeSpikesUntil = Time.time + BridgeSpikesRest;
+        }
 
         void TickTunnelSpikes(bool chased)
         {
@@ -518,8 +570,10 @@ namespace PolicePursuit.Gameplay
             JunctionSpikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             TickHeliDrop(Time.deltaTime);
             TickTunnelSpikes(Police.gameObject.activeSelf && Police.Target != null && !OnFoot);
+            TickBridgeSpikes(Police.gameObject.activeSelf && Police.Target != null && !OnFoot);
             if (!Punctured && !OnFoot && (Spikes.Over(Car.transform.position) || JunctionSpikes.Over(Car.transform.position)
-                                          || HeliSpikes.Over(Car.transform.position) || TunnelSpikes.Over(Car.transform.position)))
+                                          || HeliSpikes.Over(Car.transform.position) || TunnelSpikes.Over(Car.transform.position)
+                                          || BridgeSpikes.Over(Car.transform.position)))
             {
                 Punctured = true;
                 Car.SpeedLimit = VehicleController.TopSpeed * SpikeStrip.PuncturedScale;

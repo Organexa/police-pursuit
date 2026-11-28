@@ -238,4 +238,11 @@ _Added 2026-11-27 at your request: a second mode next to the endless run, which 
 - OW34 ◐ Passing showers (3 min dry, 90 s rain): rain particles, thicker fog; rain washes all wet prints away.
 - OW35 ◐ Rain puddles (24) glow with nearby flashing police lights (tint, not a real reflection).
 - OW36 ◐ Driving through a puddle over 5 m/s splashes (spray; a sound for your car only).
+- OW37 ◐ Hide in traffic: crawling (under 8 m/s) with a civilian car close in front and behind in your lane for 3 s loses the helicopter.
+- OW38 ◐ Spike strips (chased by car over 8 m/s; first after 35 s, then every 50 s): across the right-hand lane beyond the next crossroads; the left lane is always clear; driving over halves your top speed until you start over (HUD: TYRES BLOWN).
+- OW39 ◐ Every roadblock comes with a strip across the gap's lane 15 m before the cars: left of the strip, then through the gap.
+- OW40 ◐ Crossroads spikes (first after 60 s, then every 60 s): full-width strips straight on and on one turning at the next crossroads; the other turning is always open.
+- OW41 ◐ The helicopter drops a strip ahead of you (10 s after arriving, then every 40 s) while it can see you driving fast; it falls 0.8 s before it bites.
+- OW42 ◐ Driving into the tunnel while chased: a strip at the far end in your right-hand lane (30 s between).
+- OW43 ◐ Canal across the southern row of blocks with a bridge on every north-south road; low railings keep cars out (you can jump in, dogs cannot); heading for a bridge while chased puts a strip on its right-hand lane.
 - **Open questions:** character art and animations (you choose and buy a pack; placeholders until then); open-world scores do not go to the leaderboard until the server has a rule for them.

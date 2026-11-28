@@ -581,4 +581,15 @@ public class CoreTests
         Assert.IsFalse(b3.HasValue);
     }
 
+    [Test]
+    public void CanalHasBridgesOnEveryRoad()
+    {
+        float z = OpenWorld.CanalZ;
+        Assert.IsTrue(OpenWorld.InCanal(new Vector3(27, 0, z)), "between two roads: water");
+        Assert.IsTrue(OpenWorld.InWater(new Vector3(-81, 0, z + 3)));
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(0, 0, z)), "on the bridge");
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(54 + 5, 0, z)), "on the bridge's pavement");
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(27, 0, z + OpenWorld.CanalHalf + 1)), "on the bank");
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(27, 0, -OpenWorld.Pitch)), "the road beside it is dry");
+    }
 }

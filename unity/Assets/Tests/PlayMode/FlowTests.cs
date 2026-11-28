@@ -1893,4 +1893,43 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator PoliceSpikeTheBridgeYouAreHeadingFor()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        float canal = PolicePursuit.Gameplay.OpenWorld.CanalZ;
+        float lane = PolicePursuit.Gameplay.CivilCar.Lane;
+
+        // The railings keep cars out of the water.
+        Physics.SyncTransforms();
+        Assert.IsTrue(Physics.CheckBox(new Vector3(27, 0.35f, canal + PolicePursuit.Gameplay.OpenWorld.CanalHalf), new Vector3(1, 0.2f, 0.2f)), "railing along the bank");
+
+        // Southbound on the centre road towards the bridge (your right-hand lane going south is x < 0).
+        for (float z = canal + 50; z > canal + 25; z -= 0.5f)
+        {
+            world.Car.Place(new Vector3(-lane, 0.6f, z), 180);
+            yield return null;
+        }
+        var strip = world.BridgeSpikes;
+        Assert.IsTrue(strip.Active, "spikes on the bridge ahead");
+        Assert.AreEqual(canal, strip.Centre.z, 1, "on the bridge itself");
+        Assert.IsTrue(strip.Over(new Vector3(-lane, 0, canal)), "your lane");
+        Assert.IsFalse(strip.Over(new Vector3(lane, 0, canal)), "the other lane over the bridge is clear");
+
+        // Drive the clear lane over the bridge: no puncture.
+        for (float z = canal + 20; z > canal - 15; z -= 0.5f)
+        {
+            world.Car.Place(new Vector3(lane, 0.6f, z), 180);
+            yield return null;
+        }
+        Assert.IsFalse(world.Punctured);
+        world.Police.enabled = true;
+    }
 }
