@@ -11,24 +11,24 @@ Original mobile police-pursuit game for Organexa (Unity 6 URP, Android first). T
 Everything is built in code at runtime (no scene edits). `Core/GameManager.cs` owns states (`FreeRoam`, `MissionResult`) and creates `Gameplay/OpenWorld.cs`, which builds the district and owns every open-world system:
 `VehicleController` (Rigidbody + WheelColliders) · `PoliceChase` (grid-route AI, shared `Steer`) · `FleeDriver` · `Walker` + `TouchStick`/`LookPad` · `Health`/`IDamageable` · `WeaponData` (ScriptableObject) / `WeaponController` · `MeleeController` · `Suspect` · `Mission` · `CivilTraffic` (+`CivilCar`) · `TrafficLights` · `Pedestrians` · `RoadBlock` · `Helicopter` · `PoliceDog` · `PrintTrail` · `Weather` · `Puddles` · `SpikeStrip` · `CrossroadSpikes`. UI in `UI/GameUI.cs` (`BuildRoamHud`, `TickRoam`, mission intro/result). Tests: `Tests/EditMode/CoreTests.cs`, `Tests/PlayMode/FlowTests.cs` (one big file).
 
-## State of the branch `feat/f1-f14`
-- Remote (GitHub, public repo Organexa/police-pursuit) is at `bb261e5`. Its CI (`test` + `android-check`) passed for `4af9b47`; nothing later has been checked in CI.
-- **19 local commits not pushed** (`6ff84de` … `ff7ea67`): roadblock, roadblock chase/pull-over, wanted level + helicopter, searchlight ahead, tunnel, police dogs, pond, bark, fences, dog routing, swim, shake, paw prints, footprints, rain, puddles, splashes, image scripts.
-- **Uncommitted in the working tree** (written, not yet passing as a set): hide in traffic (OW37), lane spike strip (OW38), roadblock spikes, crossroads spikes, helicopter spike drop, tunnel-exit spikes, canal + bridges + bridge spikes. Files: `OpenWorld.cs`, `RoadBlock.cs`, `GameUI.cs`, `CoreTests.cs`, `FlowTests.cs`, new `SpikeStrip.cs`, `CrossroadSpikes.cs`.
-- A full test run of that working tree was started after fixing a compile error (an extra `}` at the end of `FlowTests.cs`); its result was not read before handover. **Re-run it.**
+## State of the branch `feat/f1-f14` (updated 2026-11-28, evening)
+- Everything is committed and pushed: GitHub is at `11ed156`. OW1–OW43 are in (spike strips, canal and bridges included), plus the helicopter-strip-clears-on-leave fix and `tools/` image scripts.
+- **CI is green again** on `11ed156` (run #81: unity and backend jobs passed). Runs #76–#78 had failed on flaky PlayMode tests on CI's slow runner (not a Unity-version issue): `OpenWorldPoliceCatchAParkedCar` (police circled the car), `OpenWorldPedestriansWalkPanicAndCannotBeHurt` (someone who briefly waited moved 0.95 m), `SirenHoldsPedestriansAtTheKerb` (a crossing started in one long frame before the hold).
+- `11ed156` fix: `PoliceChase` and `FleeDriver` steer in `FixedUpdate` (were `Update`: long frames ran many physics steps on stale inputs). That exposed a **real game bug**: within 8 m the police eased to pedal 0.2 and stalled at ~7.7 m, outside the 7 m bust range, so they could never bust a stopped player; now they creep in at walking pace (coast above 2 m/s, pedal 0.5 below). The two pedestrian tests no longer depend on frame size.
+- A run can show red only because the backend job's Supabase CLI download hit GitHub's rate limit (happened on #80); re-run it, it is not a test failure.
 
-## The user's standing instructions for the queue
-Each step: test → commit only once it passes → the user said **push after the last of these commits** (the latest instruction: push once the tunnel-spikes commit is in; canal/bridge spikes then wait for the user's word). Commit order: hide in traffic → spike strip → roadblock spikes → crossroads spikes → helicopter spike drop → tunnel spikes → **push** → canal & bridge spikes (commit only if the user asks).
-Because these steps edit the same files, they are tested together and split into commits by removing later steps' pieces; say so to the user (the in-between commits are not tested on their own).
+## The user's standing pattern
+Test → commit only once it passes → push when the user says. When several steps edit the same files they are tested together and split into commits; tell the user the in-between commits were not tested on their own.
 
 ## How tests are run (no Unity MCP here)
 - Never open the real project for tests and never upgrade its Unity (project pins 6000.3.29f1). Use a scratch copy with Unity **6000.6.10f1**: `C:\Program Files\Unity\Hub\Editor\6000.6.10f1\Editor\Unity.exe`.
 - Copy `unity/Assets`, `unity/Packages`, `unity/ProjectSettings` to a scratch folder; also copy repo `shared/` next to it (EditMode tests read `../shared/*.json`). Run `-batchmode -projectPath <copy> -runTests -testPlatform EditMode|PlayMode -testResults <xml> -logFile <log>`; check `<log>` for `error CS` first, then the XML.
 - Delete old result XML before each run (stale XML once looked like a pass). Don't run two Unity instances on one copy; never kill all `Unity.exe` (the user may have their own editor open; closing processes needs the user's OK).
-- Last passing results: OW33–OW36 set: EditMode 40/40, PlayMode 47/47.
+- Last passing results (2026-11-28, `11ed156`): scratch EditMode 43/43, PlayMode 54/54; CI run #81 the same.
+- Last scratch copy (warm `Library`, in a temp folder that may be cleaned): `C:\Users\Pritam Singh\AppData\Local\Temp\claude\d2999c7a72780b98\f1a41871-1fd4-4da9-8b1e-16d877f85094\scratchpad\proj`. Seeding a new copy's `Library` from an old one saves most of the import.
 
 ## Known issues / not verified
-- Nothing in the open world has been played by hand or on a phone; no Android build since `4af9b47` (that APK passed CI and was ready as artifact `debug-apk`).
+- Only the police bust has been checked on a phone (`11ed156` APK); the rest of the open world has not been played by hand or on a phone. android-check builds a `debug-apk` artifact (kept 3 days) on every push to `feat/f1-f14`.
 - Placeholder art, no animations; dogs can get stuck at fence corners only when their corner rule finds no clear corner; puddle "reflections" are a tint.
 - `.gitignore` comment above `art/generated/` mentions only the OpenAI script (cosmetic).
 - An untracked copy of the Go language source sits in the repo root (`api/ bin/ doc/ lib/ misc/ pkg/ src/ test/ go.env PATENTS VERSION CONTRIBUTING.md LICENSE README.md SECURITY.md codereview.cfg`): not ours, never commit it.
@@ -36,6 +36,7 @@ Because these steps edit the same files, they are tested together and split into
 
 ## Tools, MCP, plugins
 - No Unity MCP. GitHub CLI `gh` is not installed; the unauthenticated GitHub API was rate-limited once (60/h) — read run pages in the built-in browser instead.
+- **Finding failing CI tests:** game-ci prints the results XML into the job log. In the built-in browser (signed in to GitHub), on a github.com page run `fetch('/Organexa/police-pursuit/commit/<full sha>/checks/<jobId>/logs')` with javascript_tool and regex `<test-case ... result="Failed">` for name, message and `FlowTests.cs:<line>`. No download needed; the `unity-test-results` artifact is the alternative.
 - Connected/relevant: Supabase MCP (project `police-pursuit`, ref `dumwtlqllfyhbdxglsvc`), built-in browser, Artifact tool. Playwright and the Fusion plugin failed to connect.
 - Image generation: `tools/gen_image.py` (OpenAI images; needs `OPENAI_API_KEY` in the user's environment, not set yet; never handle the key in chat) and `tools/comfy_image.py` (local ComfyUI). ComfyUI 0.46.0 installed at `C:\ComfyUI` (venv Python 3.12, PyTorch 2.15 CPU, SDXL Turbo fp16 checked by SHA-256). Start with `C:\ComfyUI\run_cpu.bat` (bf16 model, fp32 VAE — bf16 VAE hangs on this CPU). One 512×512 image ≈ 214 s; close Unity first (16 GB RAM). Output: `art/generated/` (git-ignored).
 
@@ -43,7 +44,6 @@ Because these steps edit the same files, they are tested together and split into
 Open world is a separate mode beside the endless run · placeholder art until the user buys character/animation packs · fairness rules: AI never faster than the player, strips/roadblocks always leave a way through, civilians and dogs cannot be hurt · keyboard keys exist for editor testing · `com.unity.modules.vehicles` and `.particlesystem` added to the manifest.
 
 ## Exact next steps
-1. Re-run the scratch tests on the current working tree; fix failures (usually test setup); read `error CS` first.
-2. Split into commits in the order above, docs (`FEATURE-TICKETS.md` OW37+, `PROGRESS.md`) in the last one; verify the last commit equals the tested copy.
-3. Push `feat/f1-f14` after the tunnel-spikes commit; check CI on the run page; report the APK.
-4. Ask before committing canal/bridge spikes.
+Nothing is queued: CI is green and everything is pushed. Take the next ticket from `docs/FEATURE-TICKETS.md` (OW list) or what the user asks.
+- 2026-11-28: the user installed the `11ed156` test APK (android-check run #23, `Builds/11ed156/`, git-ignored) and confirmed police now bust a stopped player on the phone. The rest of the open world has not been checked on the phone.
+- New PlayMode tests: wait on conditions with generous limits, not fixed short waits; CI frames are long.
