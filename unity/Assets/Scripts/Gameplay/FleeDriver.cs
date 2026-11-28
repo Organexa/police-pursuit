@@ -40,7 +40,7 @@ namespace PolicePursuit.Gameplay
             return best;
         }
 
-        void Update()
+        void FixedUpdate() // steer every physics step: long frames would otherwise skip corners
         {
             car.SpeedLimit = VehicleController.TopSpeed * (Scared ? Spooked : Calm);
             if (From == null) return;

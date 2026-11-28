@@ -44,7 +44,7 @@ namespace PolicePursuit.Gameplay
             stuckTime = reverseLeft = 0;
         }
 
-        void Update()
+        void FixedUpdate() // steer every physics step: long frames would otherwise skip corners
         {
             car.Flash(true);
             if (Target == null) { car.Pedal = car.Steer = 0; return; } // nobody to chase: stop
@@ -91,7 +91,7 @@ namespace PolicePursuit.Gameplay
             bool sharpTurn = Mathf.Abs(angle) > 50;
             float distance = Flat(goal - transform.position);
             float pedal = sharpTurn && speed > 10 ? -0.6f // brake into a corner
-                : gentle && distance < 8 ? 0.2f         // close in gently, no ramming at speed
+                : gentle && distance < 8 ? (speed > 2 ? 0 : 0.5f) // creep in at walking pace, no ramming at speed
                 : 1;
 
             // Traffic in the way: swerve to whichever side of it is nearer, and ease off when it is close.

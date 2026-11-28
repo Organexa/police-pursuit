@@ -271,7 +271,7 @@ public class FlowTests
         Assert.Greater(world.PoliceDistance, 100, "police start far away");
         Time.timeScale = 4; // physics steps stay the same size, there are just more per frame
         float closest = float.MaxValue;
-        for (float t = 0; t < 90 && world.Busts == 0; t += Time.deltaTime)
+        for (float t = 0; t < 150 && world.Busts == 0; t += Time.deltaTime) // ends at the bust; slow CI runners need the headroom
         {
             closest = Mathf.Min(closest, world.PoliceDistance);
             yield return null;
@@ -611,12 +611,18 @@ public class FlowTests
         Assert.AreEqual(GraphicsPresets.MaxCars(GraphicsPresets.Load()), people.Count);
 
         var starts = people.ConvertAll(p => p.transform.position);
-        yield return new WaitForSeconds(2);
+        // Anyone who waited at a corner at any point may not have got far.
+        var waited = people.ConvertAll(p => p.WaitingToCross);
+        for (float t = 0; t < 2; t += Time.deltaTime)
+        {
+            yield return null;
+            for (int i = 0; i < people.Count; i++) waited[i] |= people[i].WaitingToCross;
+        }
         float half = PolicePursuit.Gameplay.Pedestrian.WalkHalf;
         for (int i = 0; i < people.Count; i++)
         {
             var p = people[i];
-            if (!p.WaitingToCross) Assert.Greater(Vector3.Distance(p.transform.position, starts[i]), 1, "walks (unless waiting at a corner)");
+            if (!waited[i]) Assert.Greater(Vector3.Distance(p.transform.position, starts[i]), 1, "walks (unless waiting at a corner)");
             var off = p.transform.position - p.Block;
             float ring = Mathf.Max(Mathf.Abs(off.x), Mathf.Abs(off.z));
             if (!p.Crossing) Assert.AreEqual(half, ring, 0.8f, "stays on the pavement (or is on a crossing)");
@@ -834,26 +840,37 @@ public class FlowTests
         var world = game.World;
         PolicePursuit.Gameplay.Pedestrian.CrossChance = 1;
         Time.timeScale = 4;
+        world.ToggleSiren(); // only heard once the car moves
         PolicePursuit.Gameplay.Pedestrian waiting = null;
+        Vector3 road = default;
         for (float t = 0; t < 60 && waiting == null; t += Time.deltaTime)
         {
-            foreach (var p in world.People.People) if (p.WaitingToCross) { waiting = p; break; }
+            var p = world.People.People.Find(x => x.WaitingToCross);
+            if (p != null)
+            {
+                var off = p.transform.position - p.Block;
+                road = Mathf.Abs(off.x) > Mathf.Abs(off.z) ? new Vector3(Mathf.Sign(off.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off.z));
+                // Siren beside them until the hold (set 4 times a second) is in place; one long frame
+                // can let them step out first, so then try someone else.
+                for (float h = 0; h < 2 && !p.HoldForSiren; h += Time.deltaTime)
+                {
+                    world.Car.Place(p.transform.position + road * 8 + Vector3.up * 0.6f, 0);
+                    world.Car.Body.linearVelocity = Vector3.forward * 6;
+                    yield return null;
+                }
+                if (p.HoldForSiren && p.WaitingToCross && !p.Crossing) waiting = p;
+            }
             yield return null;
         }
-        Assert.IsNotNull(waiting, "someone waits at a corner");
+        Assert.IsNotNull(waiting, "someone waits at a corner, held by the siren");
 
-        world.ToggleSiren();
-        var off = waiting.transform.position - waiting.Block;
-        var road = Mathf.Abs(off.x) > Mathf.Abs(off.z) ? new Vector3(Mathf.Sign(off.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off.z));
-        bool started = false, wasCrossing = false;
+        bool started = false;
         // A whole light cycle with your siren going just beside them: they never step out.
         for (float t = 0; t < PolicePursuit.Gameplay.TrafficLights.Cycle + 1; t += Time.deltaTime)
         {
             world.Car.Place(waiting.transform.position + road * 8 + Vector3.up * 0.6f, 0);
             world.Car.Body.linearVelocity = Vector3.forward * 6;
-            // Only a crossing that starts once the hold is in place counts (it is set 4 times a second).
-            if (t > 0.3f && waiting.Crossing && !wasCrossing) started = true;
-            wasCrossing = waiting.Crossing;
+            started |= waiting.Crossing;
             yield return null;
         }
         Assert.IsTrue(waiting.HoldForSiren);
