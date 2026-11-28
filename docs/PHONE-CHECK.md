@@ -43,4 +43,4 @@ Each round is one sitting of about 10 minutes. Once every box for a ticket is ti
 - [x] OW7 Prisoner side: car dies at the green garage, run past the guard to the green safehouse. Also try failing (busted, or time up) and Retry.
 
 ## Everywhere
-- [ ] Frame rate feels smooth; buttons are easy to hit and don't overlap; text is readable.
+- [x] Frame rate feels smooth; buttons are easy to hit and don't overlap; text is readable (buttons re-spaced in `b437033`, checked on the phone 2026-11-28).
