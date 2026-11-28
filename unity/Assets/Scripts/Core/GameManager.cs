@@ -295,7 +295,7 @@ namespace PolicePursuit.Core
 
         public void CyclePreset()
         {
-            Preset = (GfxPreset)(((int)Preset + 1) % 3);
+            Preset = (GfxPreset)(((int)Preset + 1) % (int)(GfxPreset.Ultra + 1));
             GraphicsPresets.Save(Preset);
             GraphicsPresets.Apply(Preset);
             PlayerPrefs.Save();
@@ -322,6 +322,7 @@ namespace PolicePursuit.Core
         {
             Settings = s;
             AudioListener.volume = s.soundVolume;
+            Gameplay.NightLook.SetMotionBlur(s.motionBlur);
         }
 
         void Buzz()

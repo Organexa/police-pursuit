@@ -41,11 +41,25 @@ public class CoreTests
     public void WantedRisesEvery30Seconds(double seconds, int expected) =>
         Assert.AreEqual(expected, WantedLevel.ForDuration(seconds));
 
-    [TestCase(GfxPreset.Low, false, false)]
-    [TestCase(GfxPreset.Medium, true, false)]
-    [TestCase(GfxPreset.High, true, true)]
-    public void EffectsFollowThePreset(GfxPreset preset, bool bloom, bool blur) =>
-        Assert.AreEqual((bloom, blur), PolicePursuit.Gameplay.NightLook.Effects(preset));
+    // Motion blur is off unless the player turns it on, and then only on High and Ultra (master prompt section 5).
+    [TestCase(GfxPreset.Low, false, false, false)]
+    [TestCase(GfxPreset.Low, true, false, false)]
+    [TestCase(GfxPreset.Medium, true, true, false)]
+    [TestCase(GfxPreset.High, false, true, false)]
+    [TestCase(GfxPreset.High, true, true, true)]
+    [TestCase(GfxPreset.Ultra, false, true, false)]
+    [TestCase(GfxPreset.Ultra, true, true, true)]
+    public void EffectsFollowThePresetAndTheBlurSetting(GfxPreset preset, bool blurWanted, bool bloom, bool blur) =>
+        Assert.AreEqual((bloom, blur), PolicePursuit.Gameplay.NightLook.Effects(preset, blurWanted));
+
+    [Test]
+    public void UltraAddsCarsAndSmoothingAndIsNeverPickedForYou()
+    {
+        Assert.Greater(GraphicsPresets.MaxCars(GfxPreset.Ultra), GraphicsPresets.MaxCars(GfxPreset.High));
+        Assert.Greater(GraphicsPresets.Msaa(GfxPreset.Ultra), GraphicsPresets.Msaa(GfxPreset.High));
+        Assert.AreEqual(GraphicsPresets.Msaa(GfxPreset.High), 2, "the other presets keep the old smoothing");
+        Assert.AreEqual(GfxPreset.High, GraphicsPresets.Pick(65536, 16384), "even a huge phone gets High until measured");
+    }
 
     [TestCase(2048, 2048, GfxPreset.Low)]
     [TestCase(8192, 512, GfxPreset.Low)]

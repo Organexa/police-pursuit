@@ -432,9 +432,6 @@ namespace PolicePursuit.Gameplay
 
         void ParkPoliceCars()
         {
-            var car = Resources.Load<GameObject>("ParkedPoliceCar/police-car");
-            var dumpster = Resources.Load<GameObject>("Props/dumpster/dumpster");
-            var barrier = Resources.Load<GameObject>("Props/barrier/barrier");
             for (int side = 0; side < 4; side++)
             for (int i = 0; i < Blocks; i++)
             {
@@ -444,7 +441,8 @@ namespace PolicePursuit.Gameplay
                 var facing = i < Blocks / 2 ? along : -along;
                 // Parked police cars on every other block; a dumpster or a road barrier in each spot left between them.
                 bool parked = i % 2 == side % 2;
-                Place(parked ? car : i % 4 < 2 ? dumpster : barrier, parked ? ParkedCarName : PropName, pos, facing);
+                Place(parked ? "ParkedPoliceCar/police-car" : i % 4 < 2 ? "Props/dumpster/dumpster" : "Props/barrier/barrier",
+                    parked ? ParkedCarName : PropName, pos, facing);
             }
             PlaceStreetProps();
         }
@@ -458,30 +456,46 @@ namespace PolicePursuit.Gameplay
 
         void PlaceStreetProps()
         {
-            var bench = Resources.Load<GameObject>("Props/bench/bench");
-            var hydrant = Resources.Load<GameObject>("Props/hydrant/hydrant");
             var park = ParkCentre;
             foreach (float x in new[] { -6f, 6f })
-                Place(bench, PropName, park + new Vector3(x, 0, -BenchFromPond), Vector3.right); // south side
+                Place("Props/bench/bench", PropName, park + new Vector3(x, 0, -BenchFromPond), Vector3.right); // south side
             foreach (float z in new[] { -6f, 6f })
-                Place(bench, PropName, park + new Vector3(BenchFromPond, 0, z), Vector3.forward); // east side
+                Place("Props/bench/bench", PropName, park + new Vector3(BenchFromPond, 0, z), Vector3.forward); // east side
             float half = (Pitch - Road) / 2; // building edge from its block centre
             for (int x = 0; x < Blocks; x++)
             {
                 float blockX = (x - Blocks / 2f + 0.5f) * Pitch, blockZ = (Blocks - 1 - Blocks / 2f + 0.5f) * Pitch;
                 var at = new Vector3(blockX + (x % 2 == 0 ? -HydrantAlong : HydrantAlong), 0, blockZ - half - HydrantFromWall);
-                Place(hydrant, PropName, at, Vector3.forward);
+                Place("Props/hydrant/hydrant", PropName, at, Vector3.forward);
             }
         }
 
-        void Place(GameObject model, string name, Vector3 pos, Vector3 facing)
+        // Each model is a LOD group (milestone 4): the full model up close, the "-lod1" copy (about a quarter of the
+        // triangles, tools/game_mesh.py) further off, and nothing once it is tiny on screen. Shares of screen height.
+        public const float LodNear = 0.06f, LodCull = 0.012f;
+
+        void Place(string path, string name, Vector3 pos, Vector3 facing)
         {
+            var model = Resources.Load<GameObject>(path);
             if (model == null) return;
             var go = Instantiate(model, transform);
             go.name = name;
             go.transform.localPosition = pos;
             go.transform.localRotation = Quaternion.LookRotation(facing);
-            go.GetComponentInChildren<MeshFilter>().gameObject.AddComponent<BoxCollider>(); // fits the mesh
+            go.GetComponentInChildren<MeshFilter>().gameObject.AddComponent<BoxCollider>(); // fits the full mesh
+            var near = go.GetComponentsInChildren<Renderer>();
+            var lowModel = Resources.Load<GameObject>(path + "-lod1");
+            LOD[] lods;
+            if (lowModel != null)
+            {
+                var low = Instantiate(lowModel, go.transform, false);
+                low.name = "LOD1";
+                lods = new[] { new LOD(LodNear, near), new LOD(LodCull, low.GetComponentsInChildren<Renderer>()) };
+            }
+            else lods = new[] { new LOD(LodCull, near) };
+            var group = go.AddComponent<LODGroup>();
+            group.SetLODs(lods);
+            group.RecalculateBounds();
         }
 
         public void ResetCar()

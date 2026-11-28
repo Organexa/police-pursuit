@@ -47,7 +47,7 @@ namespace PolicePursuit.UI
         bool layoutLeft;
         float layoutScale = -1;
         GameObject layout;
-        Text handText;
+        Text handText, blurText;
         Slider sizeSlider;
         public static float MapScale => MapSize / (2 * Gameplay.OpenWorld.Edge); // pixels per metre
         GameObject driveControls, footControls;
@@ -468,6 +468,13 @@ namespace PolicePursuit.UI
                 Change(s => s.leftHanded = !s.leftHanded);
                 UpdateLayoutText();
             });
+            blurText = MakeButton(layout.transform, "", Middle, new Vector2(190, -40), Button, () =>
+            {
+                Change(s => s.motionBlur = !s.motionBlur);
+                UpdateLayoutText();
+            });
+            Label(layout.transform, Middle, new Vector2(190, -82), new Vector2(260, 20), 14, TextAnchor.MiddleCenter).text =
+                "High and Ultra graphics only";
             Choice(layout, "Back", -188, () => { layout.SetActive(false); settings.SetActive(true); });
             if (Ads.Configured)
                 MakeButton(settings.transform, "Privacy & ads", Middle, new Vector2(-190, -118), Button, ShowConsent);
@@ -747,7 +754,11 @@ namespace PolicePursuit.UI
             layout.SetActive(true);
         }
 
-        void UpdateLayoutText() => handText.text = "Hand: " + (game.Settings.leftHanded ? "Left" : "Right");
+        void UpdateLayoutText()
+        {
+            handText.text = "Hand: " + (game.Settings.leftHanded ? "Left" : "Right");
+            blurText.text = "Motion blur: " + (game.Settings.motionBlur ? "On" : "Off");
+        }
 
         // Remembers every bottom-anchored open-world control (buttons, stick, ammo count) as built, for ApplyLayout.
         void CollectPads(params Transform[] parents)

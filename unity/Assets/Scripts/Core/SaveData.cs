@@ -21,6 +21,7 @@ namespace PolicePursuit.Core
         public bool haptics = true;
         public bool leftHanded;        // open-world controls mirrored: stick on the right, buttons on the left
         public float buttonScale = 1;  // open-world control size, 0.8 to 1.3
+        public bool motionBlur;        // off unless turned on: some players get motion sick (High and Ultra only)
 
         // Ads. These stay on this phone (not merged from the cloud).
         public int adConsent; // 0 not asked, 1 allowed, -1 refused

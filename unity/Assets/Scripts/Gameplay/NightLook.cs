@@ -11,11 +11,22 @@ namespace PolicePursuit.Gameplay
         public static readonly Color Sky = Shapes.Hex(0x0B1030);
         const float FogStart = 90f, FogEnd = 300f; // civilian cars appear 120-260 m ahead and stay visible
 
-        public static (bool bloom, bool motionBlur) Effects(GfxPreset p) =>
-            (p != GfxPreset.Low, p == GfxPreset.High);
+        // Motion blur only when the player turns it on (Settings > Controls layout; master prompt section 5: little
+        // blur on phones, an option for motion-sensitive players), and only on High or Ultra.
+        public static (bool bloom, bool motionBlur) Effects(GfxPreset p, bool blurWanted = false) =>
+            (p != GfxPreset.Low, blurWanted && p >= GfxPreset.High);
 
         static Bloom bloom;
         static MotionBlur blur;
+        static GfxPreset preset;
+        static bool blurWanted;
+        public static bool MotionBlurOn => blur != null && blur.active;
+
+        public static void SetMotionBlur(bool on)
+        {
+            blurWanted = on;
+            if (blur != null) blur.active = Effects(preset, on).motionBlur;
+        }
 
         public static void Apply(GfxPreset p)
         {
@@ -27,7 +38,8 @@ namespace PolicePursuit.Gameplay
             RenderSettings.fogColor = Sky;
             Fog(1);
             if (bloom == null) Build();
-            (bloom.active, blur.active) = Effects(p);
+            preset = p;
+            (bloom.active, blur.active) = Effects(p, blurWanted);
         }
 
         // Fog distance: 1 is the normal night, less is thicker (rain).

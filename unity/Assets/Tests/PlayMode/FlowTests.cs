@@ -2337,4 +2337,68 @@ public class FlowTests
         world.ResetCar();
         Assert.AreEqual(PolicePursuit.Gameplay.PlayerState.Driving, world.States.State, "a fresh start");
     }
+
+    [UnityTest]
+    public IEnumerator PropsAndParkedCarsDropDetailWithDistance()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        yield return null;
+        int groups = 0;
+        foreach (Transform t in game.World.transform)
+        {
+            if (t.name != PolicePursuit.Gameplay.OpenWorld.PropName && t.name != PolicePursuit.Gameplay.OpenWorld.ParkedCarName) continue;
+            var group = t.GetComponent<LODGroup>();
+            Assert.IsNotNull(group, $"{t.name} has a LOD group");
+            var lods = group.GetLODs();
+            Assert.AreEqual(2, lods.Length, "full model, then the low copy, then nothing");
+            Assert.AreEqual(PolicePursuit.Gameplay.OpenWorld.LodCull, lods[1].screenRelativeTransitionHeight, 1e-4f, "culled when tiny");
+            int Triangles(LOD lod)
+            {
+                int n = 0;
+                foreach (var r in lod.renderers)
+                {
+                    var mesh = r.GetComponent<MeshFilter>().sharedMesh; // not readable: count indices, not triangles
+                    for (int s = 0; s < mesh.subMeshCount; s++) n += (int)mesh.GetIndexCount(s) / 3;
+                }
+                return n;
+            }
+            Assert.Less(Triangles(lods[1]), Triangles(lods[0]) / 2, "the far copy is much lighter");
+            groups++;
+        }
+        Assert.AreEqual(24, groups, "16 props and 8 parked cars");
+    }
+
+    [UnityTest]
+    public IEnumerator MotionBlurOnlyWhenTurnedOn()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        void SetBlur(bool on)
+        {
+            var s = SaveData.Load(SaveData.DefaultPath);
+            s.motionBlur = on;
+            s.Save(SaveData.DefaultPath);
+            game.ApplySettings(s);
+        }
+        var preset = game.Preset;
+        try
+        {
+            GraphicsPresets.Apply(GfxPreset.High);
+            SetBlur(false);
+            Assert.IsFalse(PolicePursuit.Gameplay.NightLook.MotionBlurOn, "off by default, even on High");
+            SetBlur(true);
+            Assert.IsTrue(PolicePursuit.Gameplay.NightLook.MotionBlurOn, "on when the player wants it");
+            GraphicsPresets.Apply(GfxPreset.Medium);
+            Assert.IsFalse(PolicePursuit.Gameplay.NightLook.MotionBlurOn, "never below High");
+        }
+        finally
+        {
+            SetBlur(false);
+            GraphicsPresets.Apply(preset);
+        }
+        yield return null;
+    }
 }
