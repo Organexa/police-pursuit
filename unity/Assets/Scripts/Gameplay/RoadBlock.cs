@@ -13,6 +13,10 @@ namespace PolicePursuit.Gameplay
 
         public bool Active => cars[0].gameObject.activeSelf;
         public bool Chasing { get; private set; }
+        public event System.Action Spawned;
+        // A spike strip goes down this far before the line of cars, across the lane the gap is in: come in on the
+        // other side past the strip, then swerve through the gap.
+        public const float SpikesBefore = 15;
         public const float JoinPast = 3; // metres beyond the line of cars
         public Vector2Int From { get; private set; }
         public Vector2Int To { get; private set; }
@@ -94,6 +98,7 @@ namespace PolicePursuit.Gameplay
             }
             upSince = 0;
             nextAt = sinceStart + Every;
+            Spawned?.Invoke();
         }
 
         void Join(Transform target)

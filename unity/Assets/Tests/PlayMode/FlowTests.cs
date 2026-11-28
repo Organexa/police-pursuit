@@ -1745,4 +1745,34 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator RoadblockComesWithSpikesButStaysBeatable()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        world.Block.Spawn(new Vector2Int(2, 3), new Vector2Int(2, 4)); // cars around z = 81
+        yield return null;
+        var spikes = world.Spikes;
+        Assert.IsTrue(spikes.Active, "a roadblock brings a spike strip");
+        Assert.AreEqual(81 - PolicePursuit.Gameplay.RoadBlock.SpikesBefore, spikes.Centre.z, 0.5f, "laid before the cars");
+        Assert.IsTrue(spikes.Over(new Vector3(PolicePursuit.Gameplay.CivilCar.Lane, 0, spikes.Centre.z)), "across the gap's side");
+
+        // The way through: the left lane past the strip, then swerve right through the gap.
+        var path = new[] { new Vector3(-3.5f, 0.6f, 50), new Vector3(-3.5f, 0.6f, spikes.Centre.z + 3), new Vector3(5.3f, 0.6f, 78), new Vector3(5.3f, 0.6f, 92) };
+        for (int leg = 0; leg < path.Length - 1; leg++)
+            for (float k = 0; k <= 1; k += 0.05f)
+            {
+                world.Car.Place(Vector3.Lerp(path[leg], path[leg + 1], k), 0);
+                yield return null;
+            }
+        Assert.IsFalse(world.Punctured, "there is always a line through without blowing your tyres");
+        world.Police.enabled = true;
+    }
+
 }

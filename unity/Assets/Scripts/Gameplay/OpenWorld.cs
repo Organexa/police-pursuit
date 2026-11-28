@@ -222,6 +222,7 @@ namespace PolicePursuit.Gameplay
             Spikes = new GameObject("Spikes").AddComponent<SpikeStrip>();
             Spikes.transform.SetParent(transform, false);
             Spikes.Init();
+            Block.Spawned += () => Spikes.Spawn(Block.From, Block.To, 0.5f - RoadBlock.SpikesBefore / Pitch);
             Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
             Lights.transform.SetParent(transform, false);

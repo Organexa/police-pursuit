@@ -32,14 +32,14 @@ namespace PolicePursuit.Gameplay
             nextAt = FirstAfter;
         }
 
-        // On the right-hand lane of the road from `from` to `to`, a third of the way along.
-        public void Spawn(Vector2Int from, Vector2Int to)
+        // On the right-hand lane of the road from `from` to `to`, `at` of the way along (a third by default).
+        public void Spawn(Vector2Int from, Vector2Int to, float at = 1 / 3f)
         {
             var a = PoliceChase.Centre(from);
             var dir = (PoliceChase.Centre(to) - a).normalized;
             var across = Vector3.Cross(Vector3.up, dir);
             Along = dir;
-            Centre = a + dir * OpenWorld.Pitch / 3 + across * (Inner + Length / 2);
+            Centre = a + dir * OpenWorld.Pitch * at + across * (Inner + Length / 2);
             strip.transform.position = transform.TransformPoint(Centre);
             strip.transform.rotation = Quaternion.LookRotation(dir);
             strip.SetActive(true);
