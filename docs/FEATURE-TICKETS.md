@@ -196,3 +196,53 @@ _Code done 2026-11-26. Open: Supabase setup, database tests and each action once
   - you can send a push (title ≤ 60, body ≤ 200);
   - no secret key is in the site's code (only the anon key).
 - **Tests:** RLS: non-admin and `aal1` admin are refused. Manual: each action once.
+
+---
+
+## OW — Open-world mode ("Midnight Prison Break" slice)
+_Added 2026-11-27 at your request: a second mode next to the endless run, which stays as it is. Steps run one at a time, each tested before the next._
+
+- OW1 ☑ Physics car and test district (menu "Open World" button; Rigidbody + WheelColliders; gas, brake/reverse, handbrake, steering that tightens with speed; roll-over recovery; chase camera with speed FOV; walled 4×4 box district; Back or Menu returns). **Tests:** PlayMode drive/brake/return.
+- OW2 ☑ Police AI car that chases you: straight at you in sight, else crossroads to crossroads; 90% of your top speed; brakes for corners; backs out when stuck; busted after 2 s within 7 m while slower than 3 m/s. **Tests:** EditMode grid route, PlayMode catch a parked car.
+- OW3 ☑ Leave the car and walk: EXIT under 3 m/s (driver side, other side, or behind, whichever is free), ENTER within 4 m; capsule figure; joystick, sprint, jump, drag to turn the camera; camera stays out of walls; police chase you on foot. **Tests:** PlayMode exit, walk, enter.
+- OW4 ☑ Ranged combat: `IDamageable` + `Health`, `WeaponData` ScriptableObject (fictional Pulse Pistol and Scrap Blaster), instant hit with 15° aim assist, magazine and reload, flash and spark only; one armed suspect that is incapacitated (lies down, goes grey); player incapacitated = start over. **Tests:** EditMode health, PlayMode shoot, reload, get shot at.
+- OW5 ☑ Melee combat: PUNCH (light) and KICK (heavy) with wind-up, hit window and recovery; three-light combo (third ×1.5); lock-on to the nearest target in 2.5 m; BLOCK takes 20% and costs stamina; DODGE is untouchable for 0.25 s; stamina regenerates; no walking or shooting mid-strike. Suspect brawls within 2.2 m (guards 35% of strikes, strikes every 1.4 s). Difficulty settings not yet. **Tests:** PlayMode combo, spam refusal, block, dodge.
+- OW6 ☑ Surrender and arrest: suspect gives up at 35% health (hands up, can no longer be hurt); hold ARREST 2 s within 2 m of a surrendered or incapacitated suspect (letting go restarts); cuffed suspect follows you, rides along when you get in within 6 m; stop on the blue station pad to deliver; objective line on the HUD. **Tests:** PlayMode surrender, cuff, escort, load, deliver.
+- OW7 ☑ Midnight Prison Break: menu "Prison Break" → text intro → Police, Prisoner or Free roam. Police: chase the fleeing car (80% of your top speed, picks the road away from you); stay within 25 m for 4 s (or 90 s pass) and the escapee bails out armed; shots, then fists, surrender, cuff, deliver. Prisoner: police chase you; the car dies at the green garage; run past the blue guard to the green safehouse. 5-minute limit; busted, incapacitated or time up fails. Result screen with Retry; a win pays 500 coins and is saved in `missionsWon` (cloud merge: union). Not yet: civilian traffic, cutscenes, dialogue, music. **Tests:** EditMode merge and flee choice; PlayMode police win, prisoner win, prisoner fail.
+- OW8 ☑ Civilian traffic: right-hand lanes on the road grid, random turns (never straight back), stop for anything ahead (creep on after 4 s nose to nose), a hard hit (over 5 m/s) knocks a car loose and it respawns 8 s later at least 40 m from you; half the endless run's car count per graphics preset (4/6/8). Police and the escapee swerve round traffic and ease off close behind it. No traffic lights yet. **Tests:** EditMode lanes and turns, PlayMode drive, stay on road, stop, crash.
+- OW9 ☑ Pedestrians: walk round their block's 2 m pavement (clear of the traffic lanes), run for 4 s on shots within 30 m, the police car within 15 m or a car over 10 m/s within 10 m; cannot be hurt (Ignore Raycast layer, no Health: shots pass through, never an aim-assist target); a car reaching them makes them dive to the wall and crouch. Count = the preset's car count (8/12/16). No road crossing. **Tests:** EditMode loop and pavement, PlayMode walk, panic, shot pass-through, dive.
+- OW10 ☑ Traffic lights: a lamp on the kerb for each road into every crossroads (80); north-south 8 s green + 2 s amber, then east-west; neighbours out of step. Civilian cars stop at the line on red (and amber with room to stop) and queue without creeping; police and player ignore them. **Tests:** EditMode phases and amber rule, PlayMode a car waits behind the line and goes on green.
+- OW11 ☑ Pedestrians cross at the lights: at a corner half of them wait for a fresh red on the road ahead with time to get over (about 7 s of 10), then cross beside the crossroads; while crossing they are on the Default layer so civilian cars stop for them; stop lines moved back to 9 m so a stopped car's bumper is clear of the crossing. **Tests:** EditMode red time left and corners, PlayMode someone crosses only on a fresh red.
+- OW12 ☑ Horn (HORN, H): people within 15 m walk faster for 3 s; never makes anyone cross against the lights; 0.6 s between honks; not on foot.
+- OW13 ☑ Pull-over: civilian cars within 25 m ahead of or beside a moving police car (over 3 m/s) sidestep 1 m to the kerb and slow to 2 m/s, then pull back.
+- OW14 ☑ Player siren (police side only): light bar on your car, SIREN button (N); flashing lights, siren sound; traffic pulls over for you while moving. The chaser's siren is now heard in the open world by distance.
+- OW15 ☑ Siren hold: within 30 m of a sounding siren, people waiting at a corner keep waiting and anyone crossing hurries.
+- OW16 ☑ Escapee under your siren (within 40 m): speed cap 80% → 90% of top speed, still below yours.
+- OW17 ☑ AI cars (police chaser, escapee) swerve harder and brake fully for people on a crossing.
+- OW18 ☑ Civilian cars stop for people on a crossing and never creep into them (test added; creep fix).
+- OW19 ☑ Roadblock (while the police chase you in your car at over 8 m/s; first after 20 s, then every 45 s): two flashing police cars angled across the road beyond the next crossroads ahead, leaving a 3 m gap on the right; packs up after 25 s, once you are 60 m past, or when the chase is off. **Tests:** EditMode where it goes, PlayMode lanes blocked, gap clear, timed spawn, clearing.
+- OW20 ☑ Roadblock cars join the chase once you are 3 m past them (same AI as the main chaser, 90% of your top speed), count for being busted, and stay on you until the chase is off. **Tests:** PlayMode waits, joins, drives after you, no timer once chasing, off with the chase.
+- OW21 ☑ Civilian cars also pull over for roadblock cars on the move (parked ones are silent). **Tests:** PlayMode parked silent, moving makes way.
+- OW22 ☑ Open-world wanted level (the endless run's rule: 1 star, +1 every 30 s of chase, up to 5; back to 1 after 10 s out of sight, over 80 m from every police car and out of the searchlight) and a police helicopter from 4 stars: flies in from the corner, hovers 30 m up, its searchlight follows at 18 m/s so a fast car can leave it behind. HUD shows the stars. **Tests:** PlayMode arrival, beam, outrun, leaves below 4; losing the police.
+- OW23 ☑ Searchlight aims at the road ahead: where you will be in about a second, at most 15 m ahead; still moves at most 18 m/s. **Tests:** EditMode aim, PlayMode leads a moving car.
+- OW24 ☑ Tunnel: the road from the west-centre crossroads north to the next one has a roof; inside it the helicopter cannot see you (its beam waits where it last saw you, and you count as out of the searchlight for losing the police); HUD says HELICOPTER LOST YOU. **Tests:** EditMode tunnel extent, PlayMode beam lost inside and found again outside.
+- OW25 ☑ Police dogs: released from a chasing police car within 40 m when you are on foot; 6.5 m/s (your sprint is 7); holding you for 1 s is a bust (no injury shown); a dodge breaks the hold; cannot be hurt.
+- OW26 ☑ Park pond (the block south-east of the centre): wading is half speed; in the water a dog loses your scent, waits 6 s where it last had it and gives up; no new dog for 30 s.
+- OW27 ☑ Dogs bark every 1.5 s while they can see you within 30 m; you cannot lose the police while one barks.
+- OW28 ☑ Park fences (north and west sides, 0.7 m): you can jump them, a dog cannot.
+- OW29 ☑ Dogs go round obstacles: to the corner of whatever is in the way that gives the shortest clear trip (a fence's open end, a building's corner); also while hunting a lost scent.
+- OW30 ☑ Dogs swim after you at half speed while they can see you; the scent is lost only when you are in the water and out of sight.
+- OW31 ☑ Out of the water a dog stops 1 s to shake itself dry.
+- OW32 ☑ Wet paw prints for 6 s after a swim (one every 0.6 m, each fading after 3 s; a pool of 20).
+- OW33 ☑ Your wet footprints for 6 s after wading; a dog that lost sight or scent follows the newest it can see within 20 m.
+- OW34 ☑ Passing showers (3 min dry, 90 s rain): rain particles, thicker fog; rain washes all wet prints away.
+- OW35 ☑ Rain puddles (24) glow with nearby flashing police lights (tint, not a real reflection).
+- OW36 ☑ Driving through a puddle over 5 m/s splashes (spray; a sound for your car only).
+- OW37 ☑ Hide in traffic: crawling (under 8 m/s) with a civilian car close in front and behind in your lane for 3 s loses the helicopter.
+- OW38 ☑ Spike strips (chased by car over 8 m/s; first after 35 s, then every 50 s): across the right-hand lane beyond the next crossroads; the left lane is always clear; driving over halves your top speed until you start over (HUD: TYRES BLOWN).
+- OW39 ☑ Every roadblock comes with a strip across the gap's lane 15 m before the cars: left of the strip, then through the gap.
+- OW40 ☑ Crossroads spikes (first after 60 s, then every 60 s): full-width strips straight on and on one turning at the next crossroads; the other turning is always open.
+- OW41 ☑ The helicopter drops a strip ahead of you (10 s after arriving, then every 40 s) while it can see you driving fast; it falls 0.8 s before it bites.
+- OW42 ☑ Driving into the tunnel while chased: a strip at the far end in your right-hand lane (30 s between).
+- OW43 ☑ Canal across the southern row of blocks with a bridge on every north-south road; low railings keep cars out (you can jump in, dogs cannot); heading for a bridge while chased puts a strip on its right-hand lane.
+- **Open questions:** character art and animations (you choose and buy a pack; placeholders until then); open-world scores do not go to the leaderboard until the server has a rule for them.

@@ -32,3 +32,6 @@ unity/Assets/Settings.meta
 # Third-party models from the private assets repository: never commit here
 unity/Assets/ThirdParty/
 unity/Assets/ThirdParty.meta
+
+# Images made by tools/gen_image.py (review before using any in the game)
+art/generated/

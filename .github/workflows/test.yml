@@ -41,6 +41,14 @@ jobs:
           # GameCI publishes no version 3 images (the action default) for this Unity release.
           containerRegistryImageVersion: 4
           testMode: all
+      # Keep the test results even when tests fail: the log only shows Unity's exit code, not which tests failed.
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.ready.outputs.go == 'true'
+        with:
+          name: unity-test-results
+          path: artifacts
+          retention-days: 7
+          if-no-files-found: warn
 
   backend:
     runs-on: ubuntu-latest

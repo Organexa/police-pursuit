@@ -332,4 +332,279 @@ public class CoreTests
             Assert.IsFalse(AuthSession.IsRejected(0) || AuthSession.IsRejected(429) || AuthSession.IsRejected(500));
             Assert.AreEqual("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Auth.HashNonce("abc"));
         }
+
+    [Test]
+    public void PoliceRouteFollowsTheRoadGrid()
+    {
+        Assert.AreEqual(new Vector2Int(2, 2), PoliceChase.Node(Vector3.zero));
+        Assert.AreEqual(new Vector2Int(0, 4), PoliceChase.Node(new Vector3(-500, 0, 500))); // clamped to the grid
+        Assert.AreEqual(Vector3.zero, PoliceChase.Centre(new Vector2Int(2, 2)));
+        // Larger gap first, one crossroads at a time, never diagonal.
+        Assert.AreEqual(new Vector2Int(1, 0), PoliceChase.Step(new Vector2Int(0, 0), new Vector2Int(3, 1)));
+        Assert.AreEqual(new Vector2Int(0, 1), PoliceChase.Step(new Vector2Int(0, 0), new Vector2Int(1, 3)));
+        Assert.AreEqual(new Vector2Int(2, 2), PoliceChase.Step(new Vector2Int(2, 2), new Vector2Int(2, 2)));
+        var at = new Vector2Int(0, 0);
+        for (int i = 0; i < 8; i++) at = PoliceChase.Step(at, new Vector2Int(4, 4));
+        Assert.AreEqual(new Vector2Int(4, 4), at);
+    }
+
+    [Test]
+    public void HealthGoesDownOnceAndRestores()
+    {
+        var go = new GameObject("health test");
+        try
+        {
+            var h = go.AddComponent<Health>();
+            int downs = 0;
+            h.Downed += () => downs++;
+            h.TakeDamage(-5);
+            Assert.AreEqual(100, h.Current, "negative damage heals nothing");
+            h.TakeDamage(60);
+            Assert.AreEqual(40, h.Current);
+            h.TakeDamage(60);
+            h.TakeDamage(60);
+            Assert.AreEqual(0, h.Current);
+            Assert.IsTrue(h.Down);
+            Assert.AreEqual(1, downs);
+            h.Restore();
+            Assert.IsFalse(h.Down);
+            var gun = WeaponData.PlayerPistol();
+            Assert.Greater(gun.magazine, 0);
+            Assert.That(WeaponData.SuspectPistol().damage, Is.LessThan(gun.damage), "suspects hit softer than the player");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(go); }
+    }
+
+    [Test]
+    public void MissionsWonMergeAndFleeingPicksTheFarRoad()
+    {
+        var local = new SaveData();
+        local.missionsWon.Add("a");
+        var cloud = new SaveData();
+        cloud.missionsWon.AddRange(new[] { "a", "b" });
+        local.Merge(cloud);
+        CollectionAssert.AreEquivalent(new[] { "a", "b" }, local.missionsWon);
+        local.Merge(new SaveData { missionsWon = null });
+        Assert.AreEqual(2, local.missionsWon.Count);
+
+        // Pursuer to the south: run north, never straight back the way it came.
+        var pursuer = PoliceChase.Centre(new Vector2Int(2, 0));
+        Assert.AreEqual(new Vector2Int(2, 3), FleeDriver.Choose(new Vector2Int(2, 2), new Vector2Int(2, 1), pursuer));
+        Assert.AreNotEqual(new Vector2Int(2, 3), FleeDriver.Choose(new Vector2Int(2, 4), new Vector2Int(2, 3), pursuer));
+        Assert.AreNotEqual(new Vector2Int(2, 5), FleeDriver.Choose(new Vector2Int(2, 4), new Vector2Int(2, 3), pursuer), "stays on the grid");
+    }
+
+    [Test]
+    public void CivilCarsKeepRightAndTurnOnTheGrid()
+    {
+        // Northbound from the centre: lane 3.5 m to the right (east), clear of both crossroads and their crossings.
+        Assert.AreEqual(new Vector3(3.5f, 0, CivilCar.NodeClear), CivilCar.LaneStart(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        Assert.AreEqual(new Vector3(3.5f, 0, OpenWorld.Pitch - CivilCar.NodeClear), CivilCar.LaneEnd(new Vector2Int(2, 2), new Vector2Int(2, 3)));
+        Assert.Greater(CivilCar.NodeClear - 2, OpenWorld.Pitch / 2 - Pedestrian.WalkHalf + 0.3f, "a car at the line stops short of the crossing");
+        // Southbound on the same road uses the other lane.
+        Assert.AreEqual(-3.5f, CivilCar.LaneStart(new Vector2Int(2, 3), new Vector2Int(2, 2)).x, 1e-4f);
+        var random = new System.Random(1);
+        for (int i = 0; i < 50; i++)
+        {
+            var at = new Vector2Int(random.Next(5), random.Next(5));
+            var came = at + Vector2Int.down;
+            var next = CivilCar.Next(at, came, random);
+            Assert.AreNotEqual(came, next, "never straight back");
+            Assert.AreEqual(1, Mathf.Abs(next.x - at.x) + Mathf.Abs(next.y - at.y), "one road at a time");
+            Assert.That(next.x, Is.InRange(0, 4));
+            Assert.That(next.y, Is.InRange(0, 4));
+        }
+    }
+
+    [Test]
+    public void PedestrianLoopGoesRoundTheBlock()
+    {
+        var c = new Vector3(10, 0, 20);
+        Assert.AreEqual(c + new Vector3(-5, 0, -5), Pedestrian.Loop(c, 5, 0));
+        Assert.AreEqual(c + new Vector3(5, 0, -5), Pedestrian.Loop(c, 5, 10));
+        Assert.AreEqual(c + new Vector3(5, 0, 5), Pedestrian.Loop(c, 5, 20));
+        Assert.AreEqual(c + new Vector3(-5, 0, 5), Pedestrian.Loop(c, 5, 30));
+        Assert.AreEqual(Pedestrian.Loop(c, 5, 3), Pedestrian.Loop(c, 5, 43), "wraps round");
+        Assert.AreEqual(Pedestrian.Loop(c, 5, 37), Pedestrian.Loop(c, 5, -3), "and backwards");
+        // The walking line is on the pavement: outside the building, inside the kerb, clear of the traffic lanes.
+        float buildingHalf = (OpenWorld.Pitch - OpenWorld.Road) / 2;
+        Assert.That(Pedestrian.WalkHalf, Is.InRange(buildingHalf + 0.4f, buildingHalf + Pedestrian.Pavement - 0.4f));
+        Assert.Greater(OpenWorld.Pitch / 2 - Pedestrian.WalkHalf - 0.3f, CivilCar.Lane + 0.9f, "a car in its lane never reaches the pavement");
+    }
+
+    [Test]
+    public void TrafficLightsAlternateAndAmberLetsCloseCarsThrough()
+    {
+        var node = new Vector2Int(0, 0); // offset 0
+        var north = new Vector2Int(0, 1); // arriving along the north-south road
+        var east = new Vector2Int(1, 0);  // arriving along the east-west road
+        Assert.AreEqual(0, TrafficLights.Offset(node));
+        Assert.AreEqual(TrafficLights.Light.Green, TrafficLights.For(node, north, 1));
+        Assert.AreEqual(TrafficLights.Light.Red, TrafficLights.For(node, east, 1), "never green both ways");
+        Assert.AreEqual(TrafficLights.Light.Amber, TrafficLights.For(node, north, 9));
+        Assert.AreEqual(TrafficLights.Light.Red, TrafficLights.For(node, north, 11));
+        Assert.AreEqual(TrafficLights.Light.Green, TrafficLights.For(node, east, 11));
+        Assert.AreEqual(TrafficLights.Light.Green, TrafficLights.For(node, north, 21), "repeats every cycle");
+        for (float t = 0; t < TrafficLights.Cycle; t += 0.5f)
+            Assert.IsFalse(TrafficLights.For(node, north, t) == TrafficLights.Light.Green && TrafficLights.For(node, east, t) == TrafficLights.Light.Green);
+        Assert.AreNotEqual(TrafficLights.Offset(new Vector2Int(1, 0)), TrafficLights.Offset(new Vector2Int(2, 0)), "neighbours out of step");
+
+        Assert.IsTrue(TrafficLights.MustStop(TrafficLights.Light.Red, 1));
+        Assert.IsTrue(TrafficLights.MustStop(TrafficLights.Light.Amber, 20));
+        Assert.IsFalse(TrafficLights.MustStop(TrafficLights.Light.Amber, 2), "too close to stop: carry on");
+        Assert.IsFalse(TrafficLights.MustStop(TrafficLights.Light.Green, 1));
+    }
+
+    [Test]
+    public void CrossingFitsInsideARed()
+    {
+        var node = new Vector2Int(0, 0);
+        Assert.AreEqual(9, TrafficLights.RedLeft(node, new Vector2Int(0, 1), 11), 1e-3f);
+        Assert.AreEqual(0, TrafficLights.RedLeft(node, new Vector2Int(0, 1), 1), "not red: nothing left");
+        Assert.Less(Pedestrian.CrossTime + 1, TrafficLights.Cycle / 2, "a fresh red is long enough to get over");
+        float half = Pedestrian.WalkHalf;
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(1, 1, half)), new Vector3(half, 0, half));
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(-1, 1, half)), new Vector3(-half, 0, half));
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(1, -1, half)), new Vector3(half, 0, -half));
+        Assert.AreEqual(Pedestrian.Loop(Vector3.zero, half, Pedestrian.CornerAlong(-1, -1, half)), new Vector3(-half, 0, -half));
+    }
+
+    [Test]
+    public void CarsPullOverForPoliceBehindNotAhead()
+    {
+        var car = new GameObject("pull over test").transform;
+        try
+        {
+            Assert.IsTrue(CivilTraffic.ShouldPullOver(car, new Vector3(0, 0, -10), 25), "close behind");
+            Assert.IsTrue(CivilTraffic.ShouldPullOver(car, new Vector3(3, 0, 0), 25), "alongside");
+            Assert.IsFalse(CivilTraffic.ShouldPullOver(car, new Vector3(0, 0, 10), 25), "already past");
+            Assert.IsFalse(CivilTraffic.ShouldPullOver(car, new Vector3(0, 0, -40), 25), "too far to hear");
+        }
+        finally { UnityEngine.Object.DestroyImmediate(car.gameObject); }
+    }
+
+    [Test]
+    public void RoadblockGoesBeyondTheNextCrossroads()
+    {
+        var north = new Vector3(0, 0, 10);
+        Assert.IsTrue(RoadBlock.Plan(new Vector3(0, 0, -5), north, out var a, out var b), "crossroads ahead at the centre");
+        Assert.AreEqual(new Vector2Int(2, 2), a);
+        Assert.AreEqual(new Vector2Int(2, 3), b);
+        Assert.IsTrue(RoadBlock.Plan(new Vector3(0, 0, 5), north, out a, out b), "centre already behind: the next one");
+        Assert.AreEqual(new Vector2Int(2, 3), a);
+        Assert.AreEqual(new Vector2Int(2, 4), b);
+        Assert.IsFalse(RoadBlock.Plan(new Vector3(0, 0, 100), north, out _, out _), "no road beyond the edge");
+        Assert.IsFalse(RoadBlock.Plan(Vector3.zero, new Vector3(0.2f, 0, 0.2f), out _, out _), "barely moving");
+        Assert.IsTrue(RoadBlock.Plan(new Vector3(-30, 0, 0), new Vector3(10, 0, 1), out a, out b), "east-west too");
+        Assert.AreEqual(new Vector2Int(2, 2), a);
+        Assert.AreEqual(new Vector2Int(3, 2), b);
+    }
+
+    [Test]
+    public void SearchlightAimsAtTheRoadAhead()
+    {
+        Assert.AreEqual(new Vector3(0, 0, 10), Helicopter.Aim(Vector3.zero, new Vector3(0, 0, 10)), "a second ahead");
+        Assert.AreEqual(Helicopter.MaxLead, Helicopter.Aim(Vector3.zero, new Vector3(0, 3, 40)).magnitude, 1e-4f, "never far ahead, and on the ground");
+        Assert.AreEqual(new Vector3(5, 0, 7), Helicopter.Aim(new Vector3(5, 1, 7), Vector3.zero), "standing still: straight down on you");
+    }
+
+    [Test]
+    public void TunnelCoversOneRoad()
+    {
+        var mid = (PoliceChase.Centre(OpenWorld.TunnelFrom) + PoliceChase.Centre(OpenWorld.TunnelTo)) / 2;
+        Assert.IsTrue(OpenWorld.InTunnel(mid));
+        Assert.IsTrue(OpenWorld.InTunnel(mid + new Vector3(CivilCar.Lane, 0, 15)), "both lanes, most of its length");
+        Assert.IsFalse(OpenWorld.InTunnel(PoliceChase.Centre(OpenWorld.TunnelFrom)), "open sky over the crossroads");
+        Assert.IsFalse(OpenWorld.InTunnel(mid + new Vector3(10, 0, 0)), "not beside it");
+        Assert.IsFalse(OpenWorld.InTunnel(Vector3.zero));
+    }
+
+    [Test]
+    public void PondIsInTheParkBlock()
+    {
+        var c = OpenWorld.ParkCentre;
+        Assert.IsTrue(OpenWorld.InWater(c));
+        Assert.IsTrue(OpenWorld.InWater(c + new Vector3(OpenWorld.PondHalf - 1, 0, 0)));
+        Assert.IsFalse(OpenWorld.InWater(c + new Vector3(OpenWorld.PondHalf + 1, 0, 0)), "dry grass round it");
+        float block = (OpenWorld.Pitch - OpenWorld.Road) / 2;
+        Assert.Less(OpenWorld.PondHalf, block, "inside the block, off the roads");
+    }
+
+    [Test]
+    public void YouCannotLoseThePoliceWhileTheDogBarks()
+    {
+        float far = OpenWorld.LoseRange + 1;
+        Assert.IsTrue(OpenWorld.Hidden(far, false, false, false));
+        Assert.IsFalse(OpenWorld.Hidden(far, false, false, true), "a barking dog gives you away");
+        Assert.IsFalse(OpenWorld.Hidden(far, true, false, false), "seen by a police car");
+        Assert.IsFalse(OpenWorld.Hidden(far, false, true, false), "in the searchlight");
+        Assert.IsFalse(OpenWorld.Hidden(OpenWorld.LoseRange - 1, false, false, false), "too close");
+    }
+
+    [Test]
+    public void ShowersComeAndGo()
+    {
+        Assert.IsFalse(Weather.RainingAt(0), "a visit starts dry");
+        Assert.IsFalse(Weather.RainingAt(Weather.DryFor - 1));
+        Assert.IsTrue(Weather.RainingAt(Weather.DryFor + 1), "then a shower");
+        Assert.IsTrue(Weather.RainingAt(Weather.Cycle - 1));
+        Assert.IsFalse(Weather.RainingAt(Weather.Cycle + 1), "and dry again");
+    }
+
+    [Test]
+    public void HidingInTrafficNeedsACarInFrontAndBehind()
+    {
+        var at = Vector3.zero;
+        var north = Vector3.forward;
+        Assert.IsTrue(OpenWorld.Sandwiched(at, north, new[] { new Vector3(0, 0, 7), new Vector3(0.5f, 0, -6) }));
+        Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(0, 0, 7) }), "only one in front");
+        Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(0, 0, 7), new Vector3(0, 0, -20) }), "the one behind is too far back");
+        Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(4, 0, 7), new Vector3(0, 0, -6) }), "the one in front is in the next lane");
+    }
+
+    [Test]
+    public void CrossroadSpikesAlwaysLeaveOneWayOut()
+    {
+        var node = new Vector2Int(2, 2);
+        var north = Vector2Int.up;
+        var open = CrossroadSpikes.Choose(node, north, 0, out var a, out var b);
+        Assert.AreEqual(new Vector2Int(2, 3), a, "straight on is blocked");
+        Assert.IsTrue(b.HasValue, "and one turning");
+        Assert.AreNotEqual(b.Value, open);
+        Assert.AreEqual(1, Mathf.Abs(open.x - node.x) + Mathf.Abs(open.y - node.y), "the open exit is a turning off this crossroads");
+        Assert.AreNotEqual(node - north, open, "never just the way you came");
+        var other = CrossroadSpikes.Choose(node, north, 1, out _, out var b2);
+        Assert.AreEqual(b.Value, other, "the pick swaps which turning stays open");
+        // At the west edge, heading north: only one turning (east) exists, and it stays open.
+        var edge = CrossroadSpikes.Choose(new Vector2Int(0, 2), north, 0, out var a3, out var b3);
+        Assert.AreEqual(new Vector2Int(1, 2), edge);
+        Assert.IsFalse(b3.HasValue);
+    }
+
+    [Test]
+    public void CanalHasBridgesOnEveryRoad()
+    {
+        float z = OpenWorld.CanalZ;
+        Assert.IsTrue(OpenWorld.InCanal(new Vector3(27, 0, z)), "between two roads: water");
+        Assert.IsTrue(OpenWorld.InWater(new Vector3(-81, 0, z + 3)));
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(0, 0, z)), "on the bridge");
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(54 + 5, 0, z)), "on the bridge's pavement");
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(27, 0, z + OpenWorld.CanalHalf + 1)), "on the bank");
+        Assert.IsFalse(OpenWorld.InCanal(new Vector3(27, 0, -OpenWorld.Pitch)), "the road beside it is dry");
+    }
+
+    [Test]
+    public void EngineChangesGearAndThePitchDropsAtEachChange()
+    {
+        float top = VehicleController.TopSpeed;
+        Assert.AreEqual(0, Sound.Gear(0, top), "first gear at a standstill");
+        Assert.AreEqual(Sound.GearTops.Length - 1, Sound.Gear(top, top), "top gear at top speed");
+        for (int g = 0; g < Sound.GearTops.Length - 1; g++)
+        {
+            float change = Sound.GearTops[g] * top;
+            Assert.Greater(Sound.GearPitch(change - 0.5f, top), Sound.GearPitch(change - 2, top), "climbs through the gear");
+            Assert.Less(Sound.GearPitch(change + 0.5f, top), Sound.GearPitch(change - 0.5f, top), "drops at the change");
+        }
+        Assert.AreEqual(Sound.GearPitch(10, top), Sound.GearPitch(-10, top), 1e-4f, "reversing sounds like first gear forward");
+    }
 }

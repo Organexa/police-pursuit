@@ -16,7 +16,7 @@ namespace PolicePursuit.Gameplay
 
         GameManager game;
         AudioSource engine, siren, effects, ui;
-        AudioClip crash, coin, whoosh, click;
+        AudioClip crash, coin, whoosh, click, horn, bark, splash;
         readonly AudioSource[] music = new AudioSource[3];
 
         // Layer 0 (bass and kick) always plays; drums join at two stars and the lead at three, only while driving.
@@ -28,6 +28,24 @@ namespace PolicePursuit.Gameplay
 
         public static float EnginePitch(float speed, float topSpeed) =>
             Mathf.Lerp(0.8f, 2f, topSpeed > 0 ? speed / topSpeed : 0);
+
+        // Open-world car: five gears, as fractions of top speed. The pitch climbs through each gear and drops at the change.
+        public static readonly float[] GearTops = { 0.15f, 0.3f, 0.48f, 0.7f, 1f };
+        public static int Gear(float speed, float topSpeed)
+        {
+            float f = topSpeed > 0 ? Mathf.Clamp01(Mathf.Abs(speed) / topSpeed) : 0;
+            int g = 0;
+            while (g < GearTops.Length - 1 && f > GearTops[g]) g++;
+            return g;
+        }
+
+        public static float GearPitch(float speed, float topSpeed)
+        {
+            int g = Gear(speed, topSpeed);
+            float f = topSpeed > 0 ? Mathf.Clamp01(Mathf.Abs(speed) / topSpeed) : 0;
+            float low = g == 0 ? 0 : GearTops[g - 1];
+            return 0.8f + 0.12f * g + 0.9f * (f - low) / (GearTops[g] - low);
+        }
 
         // Louder as the police get closer, silent beyond SirenRange.
         public static float SirenVolume(float distance) => Mathf.Clamp01(1 - distance / SirenRange);
@@ -54,21 +72,41 @@ namespace PolicePursuit.Gameplay
             coin = Clip("coin", 0.18f, Coin);
             whoosh = Clip("whoosh", 0.3f, Whoosh());
             click = Clip("click", 0.04f, t => Tone(660, t) * (1 - t / 0.04f));
+            // Two-note car horn, faded in and out so it does not click.
+            // Two short gruff yaps: a falling tone roughened with noise.
+            var yap = new Random(3);
+            bark = Clip("bark", 0.32f, t =>
+            {
+                float local = t % 0.16f;
+                float pitch = Mathf.Lerp(520, 260, local / 0.16f);
+                return (Tone(pitch, local) * 0.6f + (float)(yap.NextDouble() * 2 - 1) * 0.4f) * Mathf.Exp(-14 * local);
+            });
+            var drops = new Random(4);
+            splash = Clip("splash", 0.35f, t => (float)(drops.NextDouble() * 2 - 1) * 0.5f * Mathf.Exp(-9 * t) * Mathf.Min(1, t * 60));
+            horn = Clip("horn", 0.45f, t => (Tone(415, t) + Tone(523, t)) * 0.35f * Mathf.Min(1, t * 40, (0.45f - t) * 20));
         }
 
         public void Hit() => effects.PlayOneShot(crash, 0.8f);
         public void CoinPickup() => effects.PlayOneShot(coin, 0.5f);
         public void NearMiss() => effects.PlayOneShot(whoosh, 0.6f);
         public void Click() => ui.PlayOneShot(click, 0.5f);
+        public void Horn() => effects.PlayOneShot(horn, 0.7f);
+        public void Bark() => effects.PlayOneShot(bark, 0.6f);
+        public void Splash() => effects.PlayOneShot(splash, 0.5f);
 
         void Update()
         {
             if (game == null) return;
             bool driving = game.State == GameState.Run;
             var car = game.Player;
-            engine.volume = driving ? 0.25f : 0;
-            engine.pitch = EnginePitch(car.Speed, car.TopSpeed);
-            siren.volume = driving ? 0.35f * SirenVolume(game.Traffic.NearestCop(car.transform.position)) : 0;
+            var world = game.State == GameState.FreeRoam ? game.World : null;
+            bool roamDriving = world != null && !world.OnFoot && !world.Car.Wrecked;
+            engine.volume = driving || roamDriving ? 0.25f : 0;
+            engine.pitch = roamDriving ? GearPitch(world.Car.Speed, VehicleController.TopSpeed) : EnginePitch(car.Speed, car.TopSpeed);
+            float sirenAt = driving ? game.Traffic.NearestCop(car.transform.position) : float.MaxValue;
+            if (world != null) // your own siren is right on top of you; the chaser's fades with distance
+                sirenAt = world.SirenOn ? 0 : world.Police.gameObject.activeSelf ? world.PoliceDistance : float.MaxValue;
+            siren.volume = 0.35f * SirenVolume(sirenAt);
             for (int i = 0; i < music.Length; i++)
                 music[i].volume = game.Settings.musicVolume * MusicGain(i, game.Wanted, driving);
         }

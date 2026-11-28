@@ -47,6 +47,8 @@ jobs:
           androidExportType: androidPackage
           versioning: Custom
           version: 1.0.0
+          # Test APK only: switches on the in-game autotest (Core/AutoTest.cs) for tools/android_autotest.py.
+          customParameters: -ppAutotest
           # Once create-keystore has run, sign with the upload key so every test build has the same
           # fingerprint (Google sign-in checks it). Until then these are empty and a debug key is used.
           androidKeystoreName: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && 'upload.keystore' || '' }}
