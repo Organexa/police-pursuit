@@ -10,16 +10,20 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Police Pursuit Admin</h1>
+  <header class="top">
+    <h1>Police Pursuit <span>Admin</span></h1>
+  </header>
   <p id="status" role="status"></p>
 
-  <form id="login" hidden>
+  <form id="login" class="gate" hidden>
+    <h2>Sign in</h2>
     <label>Email <input name="email" type="email" autocomplete="username" required></label>
     <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
     <button>Sign in</button>
   </form>
 
-  <form id="mfa" hidden>
+  <form id="mfa" class="gate" hidden>
+    <h2>Authenticator code</h2>
     <div id="enroll" hidden>
       <p>First sign-in: scan this with your authenticator app.</p>
       <img id="qr" alt="QR code for your authenticator app" width="200" height="200">
@@ -42,46 +46,58 @@
     </nav>
 
     <section id="dashboard">
-      <dl>
-        <dt>Players</dt><dd id="playerCount">-</dd>
-        <dt>Runs uploaded today</dt><dd id="runsToday">-</dd>
-        <dt>Top score</dt><dd id="topScore">-</dd>
+      <h2>Dashboard</h2>
+      <dl class="stats">
+        <div><dt>Players</dt><dd id="playerCount">-</dd></div>
+        <div><dt>Runs uploaded today</dt><dd id="runsToday">-</dd></div>
+        <div><dt>Top score</dt><dd id="topScore" class="key">-</dd></div>
       </dl>
     </section>
 
     <section id="players" hidden>
+      <h2>Players</h2>
       <form id="search">
         <label>Player name <input name="q" maxlength="20"></label>
         <button>Search</button>
       </form>
-      <table>
-        <thead><tr><th>Name</th><th>Best score</th><th>Last seen</th></tr></thead>
-        <tbody id="playerRows"></tbody>
-      </table>
+      <div class="table">
+        <table>
+          <thead><tr><th>Name</th><th class="num">Best score</th><th>Last seen</th></tr></thead>
+          <tbody id="playerRows"></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="scores" hidden>
-      <p>The 200 highest scores, hidden ones included.</p>
-      <table>
-        <thead><tr><th>Player</th><th>Score</th><th>Car</th><th>Played</th><th>Reason</th><th></th></tr></thead>
-        <tbody id="scoreRows"></tbody>
-      </table>
+      <h2>Scores</h2>
+      <p class="lead">The 200 highest scores, hidden ones included</p>
+      <div class="table">
+        <table>
+          <thead><tr><th>Player</th><th class="num">Score</th><th>Car</th><th>Played</th><th>Reason</th><th></th></tr></thead>
+          <tbody id="scoreRows"></tbody>
+        </table>
+      </div>
     </section>
 
     <section id="notice" hidden>
+      <h2>Update notice</h2>
       <form id="noticeForm">
-        <label>Latest version (shows "Update available") <input name="latest" required></label>
-        <label>Critical minimum (older versions are blocked) <input name="critical" required></label>
+        <label>Latest version <small>Older versions show “Update available”</small> <input name="latest" required></label>
+        <label>Critical minimum <small>Older versions are blocked until they update</small> <input name="critical" required></label>
         <label>Message <textarea name="message" maxlength="300" rows="3"></textarea></label>
         <button>Save</button>
       </form>
     </section>
 
     <section id="push" hidden>
+      <h2>Push notification</h2>
       <form id="pushForm">
         <label>Title <input name="title" maxlength="60" required></label>
         <label>Message <textarea name="body" maxlength="200" rows="3" required></textarea></label>
-        <div class="preview"><strong id="previewTitle"></strong><p id="previewBody"></p></div>
+        <div class="preview" aria-label="Preview on a phone">
+          <p class="preview-app"><span aria-hidden="true"></span>Police Pursuit · now</p>
+          <strong id="previewTitle"></strong><p id="previewBody"></p>
+        </div>
         <button>Send to all players</button>
       </form>
     </section>
