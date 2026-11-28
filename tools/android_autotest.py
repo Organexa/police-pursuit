@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 
 PACKAGE = "com.policepursuit.game"  # Core/UpdateCheck.PackageName
+ACK = f"/sdcard/Android/data/{PACKAGE}/files/autotest-ack"  # the game freezes at each SHOT until this appears
 SDK = Path(os.environ.get("ANDROID_SDK_ROOT") or os.environ.get("ANDROID_HOME")
            or Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk")
 ADB = SDK / "platform-tools" / ("adb.exe" if os.name == "nt" else "adb")
@@ -147,7 +148,8 @@ def main() -> int:
         prepare_device()
         adb("shell", "am", "force-stop", PACKAGE)
         adb("logcat", "-c")
-        adb("shell", "am", "start", "-n", comp, "--es", "autotest", "1")
+        adb("shell", "rm", "-f", ACK, check=False)
+        adb("shell", "am", "start", "-n", comp, "--es", "autotest", "ack")
         print("Launched", comp)
 
         lines, passed, failed, done, crashed, started = [], 0, 0, False, False, False
@@ -186,6 +188,7 @@ def main() -> int:
                     shots += 1
                     if not screenshot(out / f"{shots:02d}-{rest or 'shot'}.png"):
                         lines.append(f"NOSHOT {rest}")
+                    adb("shell", "touch", ACK, check=False)  # taken: the game carries on
                 elif kind == "PASS":
                     passed += 1
                 elif kind == "FAIL":

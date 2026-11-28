@@ -2073,6 +2073,7 @@ public class FlowTests
         Assert.AreEqual(0, world.Tyres.Showing);
         yield return Drive(car, 1, 3); // north along the road from the centre
         Assert.Greater(car.Speed, 8, "up to speed");
+        Assert.AreEqual(0, world.Tyres.Showing, "a full-throttle start leaves no marks");
         int puffs = world.Tyres.SmokePuffs;
         for (float t = 0; t < 1.2f; t += Time.deltaTime)
         {
@@ -2098,11 +2099,25 @@ public class FlowTests
     {
         yield return null;
         GameManager.Instance.ToMenu();
-        var test = PolicePursuit.Core.AutoTest.Run(quitWhenDone: false, shots: false);
-        for (float t = 0; t < 120 && !test.Done; t += Time.unscaledDeltaTime) yield return null;
+        // This test plays the runner: it answers every SHOT with the ack file, as tools/android_autotest.py does.
+        var ack = Path.Combine(Application.temporaryCachePath, "autotest-ack");
+        int shots = 0, missed = 0;
+        void Answer(string message, string stack, LogType type)
+        {
+            if (message.StartsWith("AUTOTEST SHOT")) { shots++; File.WriteAllText(ack, "taken"); }
+            if (message.StartsWith("AUTOTEST NOACK")) missed++;
+        }
+        Application.logMessageReceived += Answer;
+        var test = PolicePursuit.Core.AutoTest.Run(quitWhenDone: false);
+        test.AckFile = ack;
+        for (float t = 0; t < 180 && !test.Done; t += Time.unscaledDeltaTime) yield return null;
+        Application.logMessageReceived -= Answer;
         Assert.IsTrue(test.Done, "finishes");
         Assert.AreEqual(0, test.Failed, "every device check passes (see the AUTOTEST lines in the log)");
         Assert.Greater(test.Passed, 10);
+        Assert.Greater(shots, 5, "screenshots asked for");
+        Assert.AreEqual(0, missed, "every screenshot answered");
+        Assert.AreEqual(1f, Time.timeScale, "time runs again after each screenshot");
         Object.Destroy(test.gameObject);
     }
 }

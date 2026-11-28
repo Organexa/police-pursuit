@@ -14,12 +14,16 @@ namespace PolicePursuit.Core
     public class AutoTest : MonoBehaviour
     {
         public const string Tag = "AUTOTEST";
-        public const float ShotPause = 1.5f; // real seconds held still while the runner takes a screenshot
+        public const float ShotPause = 1.5f; // real seconds held still for a screenshot when nobody answers
+        public const float AckWait = 20;     // most real seconds to wait for the runner's "taken" file
         public int Passed { get; private set; }
         public int Failed { get; private set; }
         public bool Done { get; private set; }
         public bool QuitWhenDone { get; set; }
         public bool Shots { get; set; } = true;
+        // Set by the runner's launch: after each SHOT line the game freezes until this file appears (the runner has
+        // taken the screenshot), so the picture shows the moment of the check even on a slow device.
+        public string AckFile { get; set; }
         readonly List<float> frames = new List<float>(4096);
         int errors;
         bool measuring;
@@ -60,8 +64,27 @@ namespace PolicePursuit.Core
         IEnumerator Shot(string name)
         {
             if (!Shots) yield break;
+            if (AckFile == null)
+            {
+                Debug.Log($"{Tag} SHOT {name}");
+                yield return new WaitForSecondsRealtime(ShotPause);
+                yield break;
+            }
+            TryDelete(AckFile);
+            float scale = Time.timeScale;
+            Time.timeScale = 0; // nothing moves until the picture is taken
             Debug.Log($"{Tag} SHOT {name}");
-            yield return new WaitForSecondsRealtime(ShotPause);
+            float until = Time.realtimeSinceStartup + AckWait;
+            while (!System.IO.File.Exists(AckFile) && Time.realtimeSinceStartup < until) yield return null;
+            if (!System.IO.File.Exists(AckFile)) Debug.Log($"{Tag} NOACK {name}");
+            TryDelete(AckFile);
+            Time.timeScale = scale;
+        }
+
+        static void TryDelete(string path)
+        {
+            try { System.IO.File.Delete(path); }
+            catch (System.Exception) { } // a file the runner made may not be ours to delete; it is overwritten next time
         }
 
         static IEnumerator Hold(VehicleController car, float pedal, float steer, bool handbrake, float seconds)
@@ -187,7 +210,10 @@ namespace PolicePursuit.Core
             {
                 if (intent == null) return;
                 bool loop = intent.Call<string>("getAction") == "com.google.intent.action.TEST_LOOP";
-                if (loop || intent.Call<bool>("hasExtra", "autotest")) AutoTest.Run(quitWhenDone: true);
+                if (!loop && !intent.Call<bool>("hasExtra", "autotest")) return;
+                var test = AutoTest.Run(quitWhenDone: true);
+                if (intent.Call<string>("getStringExtra", "autotest") == "ack") // the runner answers every SHOT
+                    test.AckFile = System.IO.Path.Combine(Application.persistentDataPath, "autotest-ack");
             }
         }
     }
