@@ -58,6 +58,25 @@ These run as real database roles (`anon`, a signed-in player, a second player, a
 | Anyone inserts into `admins` from the app | Refused |
 | `anon` reads `leaderboard` and `app_config` | Allowed |
 
+### 2.5 Device autotest (Android emulator, no hands)
+The test APK from the `android-check` workflow is built with `-ppAutotest`, which switches on `Core/AutoTest.cs`.
+Launched with the `autotest` extra (or as an Android game loop), the game plays itself: boot, free roam, accelerate,
+brake lights, handbrake skid, get out, walk, shoot, get back in, crash damage, Midnight Prison Break start and siren,
+and fails on any error or exception in the log. It logs `AUTOTEST PASS|FAIL|SHOT|PERF|DONE` lines.
+
+```powershell
+python tools/android_autotest.py Builds/<commit>/PolicePursuit.apk
+```
+
+The runner starts the `Medium_Phone` emulator without a window if no device is attached, installs the APK, follows
+the log, saves a screenshot at every `SHOT` and writes `report.txt` next to the APK (exit code 0 only when every check
+passed with no crash). Release builds never contain the switch. The same scenario runs in the editor as the PlayMode
+test `DeviceAutoTestPassesInTheEditor`.
+
+Limits: the emulator runs the Arm build through translation, so its frame rate says nothing about a real phone, and it
+checks that things work, not how they feel. A short hands-on try per milestone (or real devices in Firebase Test Lab
+later) still covers that.
+
 ## 3. Manual checks on a phone
 Done once per release with a test build from the build run's downloads (or the GitHub Release for a `v*` tag). I'll send you the list for each release; it takes about 15 minutes.
 

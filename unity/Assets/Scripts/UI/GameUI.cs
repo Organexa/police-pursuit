@@ -234,6 +234,7 @@ namespace PolicePursuit.UI
 
             // After the control sets, so their drag area never covers these.
             speedText = Label(root, new Vector2(0, 1), new Vector2(16, -16), new Vector2(460, 32), 22, TextAnchor.MiddleLeft);
+            speedText.horizontalOverflow = HorizontalWrapMode.Overflow; // a long status line runs on instead of losing its end
             bustText = Label(root, Middle, new Vector2(0, 80), new Vector2(400, 40), 28, TextAnchor.MiddleCenter);
             bustText.color = Gameplay.Shapes.Red;
             bustText.raycastTarget = false;
@@ -338,8 +339,9 @@ namespace PolicePursuit.UI
                 if (Gameplay.KeyInput.SirenPressed()) world.ToggleSiren();
                 sirenButton.transform.parent.gameObject.SetActive(world.PlayerIsPolice);
                 sirenButton.text = world.SirenOn ? "SIREN ON" : "SIREN";
-                speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h    Police {Mathf.RoundToInt(world.PoliceDistance)} m"
-                    + (world.Punctured ? "    TYRES BLOWN" : "");
+                speedText.text = $"{Mathf.RoundToInt(car.SpeedKmh)} km/h   Police {Mathf.RoundToInt(world.PoliceDistance)} m"
+                    + (car.Wrecked ? "   CAR WRECKED: GET OUT" : $"   Car {Mathf.CeilToInt(car.Condition)}%")
+                    + (world.Punctured ? "   TYRES BLOWN" : "");
             }
             var m = world.Mission;
             int wanted = world.Wanted;

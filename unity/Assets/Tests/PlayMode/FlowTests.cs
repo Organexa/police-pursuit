@@ -2013,4 +2013,93 @@ public class FlowTests
             }
         }
     }
+
+    [UnityTest]
+    public IEnumerator CarLightsBrakeLightsAndCrashDamage()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var car = world.Car;
+        int headlights = 0;
+        foreach (Transform t in car.transform.GetChild(0)) if (t.name == "Headlight") headlights++;
+        Assert.AreEqual(2, headlights);
+        Assert.IsFalse(car.BrakeLightsOn, "dark at rest");
+
+        yield return Drive(car, 1, 2);
+        Assert.IsFalse(car.BrakeLightsOn, "dark on the gas");
+        yield return Drive(car, -1, 0.3f);
+        Assert.IsTrue(car.BrakeLightsOn, "lit while braking");
+        yield return Drive(car, 0, 0.2f);
+        Assert.IsFalse(car.BrakeLightsOn, "dark again off the brake");
+
+        // Into the north wall at 20 m/s (x = 0 is a road running up to the wall, clear of the parked cars).
+        Assert.IsFalse(world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>().TakesDamage, "AI cars never break down");
+        Assert.AreEqual(PolicePursuit.Gameplay.VehicleController.MaxCondition, car.Condition);
+        for (int crash = 0; crash < 4 && !car.Wrecked; crash++)
+        {
+            car.Place(new Vector3(0, 0.6f, PolicePursuit.Gameplay.OpenWorld.Edge - 12), 0);
+            yield return new WaitForFixedUpdate();
+            car.Body.linearVelocity = car.transform.forward * 20;
+            for (float t = 0; t < 1.5f; t += Time.deltaTime) { car.Pedal = 0; yield return null; }
+            if (crash == 0) Assert.Less(car.Condition, PolicePursuit.Gameplay.VehicleController.MaxCondition, "a hard hit costs condition");
+        }
+        Assert.IsTrue(car.Wrecked, "enough hard hits wreck it");
+
+        car.Place(new Vector3(0, 0.6f, 20), 0);
+        yield return new WaitForFixedUpdate();
+        yield return Drive(car, 1, 2);
+        Assert.Less(Mathf.Abs(car.Speed), 1, "a wrecked car does not drive");
+        for (float t = 0; t < 0.5f; t += Time.deltaTime) yield return null;
+        Assert.Greater(world.Tyres.SmokePuffs, 0, "smoke from under the bonnet");
+
+        world.ResetCar();
+        Assert.AreEqual(PolicePursuit.Gameplay.VehicleController.MaxCondition, car.Condition, "a fresh start repairs it");
+    }
+
+    [UnityTest]
+    public IEnumerator HandbrakeSlideLeavesSkidMarksAndSmoke()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.Target = null;
+        var car = world.Car;
+        Assert.AreEqual(0, world.Tyres.Showing);
+        yield return Drive(car, 1, 3); // north along the road from the centre
+        Assert.Greater(car.Speed, 8, "up to speed");
+        int puffs = world.Tyres.SmokePuffs;
+        for (float t = 0; t < 1.2f; t += Time.deltaTime)
+        {
+            car.Pedal = 0;
+            car.Steer = 1;
+            car.Handbrake = true;
+            yield return null;
+        }
+        car.Handbrake = false;
+        car.Steer = 0;
+        Assert.Greater(world.Tyres.Showing, 2, "skid marks on the road");
+        Assert.Greater(world.Tyres.SmokePuffs, puffs, "tyre smoke");
+
+        world.ResetCar();
+        Assert.AreEqual(0, world.Tyres.Showing, "a fresh start clears the road");
+    }
+
+    [UnityTest]
+    public IEnumerator DeviceAutoTestPassesInTheEditor()
+    {
+        yield return null;
+        GameManager.Instance.ToMenu();
+        var test = PolicePursuit.Core.AutoTest.Run(quitWhenDone: false, shots: false);
+        for (float t = 0; t < 120 && !test.Done; t += Time.unscaledDeltaTime) yield return null;
+        Assert.IsTrue(test.Done, "finishes");
+        Assert.AreEqual(0, test.Failed, "every device check passes (see the AUTOTEST lines in the log)");
+        Assert.Greater(test.Passed, 10);
+        Object.Destroy(test.gameObject);
+    }
 }

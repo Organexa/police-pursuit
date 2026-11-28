@@ -592,4 +592,19 @@ public class CoreTests
         Assert.IsFalse(OpenWorld.InCanal(new Vector3(27, 0, z + OpenWorld.CanalHalf + 1)), "on the bank");
         Assert.IsFalse(OpenWorld.InCanal(new Vector3(27, 0, -OpenWorld.Pitch)), "the road beside it is dry");
     }
+
+    [Test]
+    public void EngineChangesGearAndThePitchDropsAtEachChange()
+    {
+        float top = VehicleController.TopSpeed;
+        Assert.AreEqual(0, Sound.Gear(0, top), "first gear at a standstill");
+        Assert.AreEqual(Sound.GearTops.Length - 1, Sound.Gear(top, top), "top gear at top speed");
+        for (int g = 0; g < Sound.GearTops.Length - 1; g++)
+        {
+            float change = Sound.GearTops[g] * top;
+            Assert.Greater(Sound.GearPitch(change - 0.5f, top), Sound.GearPitch(change - 2, top), "climbs through the gear");
+            Assert.Less(Sound.GearPitch(change + 0.5f, top), Sound.GearPitch(change - 0.5f, top), "drops at the change");
+        }
+        Assert.AreEqual(Sound.GearPitch(10, top), Sound.GearPitch(-10, top), 1e-4f, "reversing sounds like first gear forward");
+    }
 }

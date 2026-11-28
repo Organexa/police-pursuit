@@ -29,6 +29,24 @@ namespace PolicePursuit.Gameplay
         public static float EnginePitch(float speed, float topSpeed) =>
             Mathf.Lerp(0.8f, 2f, topSpeed > 0 ? speed / topSpeed : 0);
 
+        // Open-world car: five gears, as fractions of top speed. The pitch climbs through each gear and drops at the change.
+        public static readonly float[] GearTops = { 0.15f, 0.3f, 0.48f, 0.7f, 1f };
+        public static int Gear(float speed, float topSpeed)
+        {
+            float f = topSpeed > 0 ? Mathf.Clamp01(Mathf.Abs(speed) / topSpeed) : 0;
+            int g = 0;
+            while (g < GearTops.Length - 1 && f > GearTops[g]) g++;
+            return g;
+        }
+
+        public static float GearPitch(float speed, float topSpeed)
+        {
+            int g = Gear(speed, topSpeed);
+            float f = topSpeed > 0 ? Mathf.Clamp01(Mathf.Abs(speed) / topSpeed) : 0;
+            float low = g == 0 ? 0 : GearTops[g - 1];
+            return 0.8f + 0.12f * g + 0.9f * (f - low) / (GearTops[g] - low);
+        }
+
         // Louder as the police get closer, silent beyond SirenRange.
         public static float SirenVolume(float distance) => Mathf.Clamp01(1 - distance / SirenRange);
 
@@ -81,10 +99,11 @@ namespace PolicePursuit.Gameplay
             if (game == null) return;
             bool driving = game.State == GameState.Run;
             var car = game.Player;
-            engine.volume = driving ? 0.25f : 0;
-            engine.pitch = EnginePitch(car.Speed, car.TopSpeed);
-            float sirenAt = driving ? game.Traffic.NearestCop(car.transform.position) : float.MaxValue;
             var world = game.State == GameState.FreeRoam ? game.World : null;
+            bool roamDriving = world != null && !world.OnFoot && !world.Car.Wrecked;
+            engine.volume = driving || roamDriving ? 0.25f : 0;
+            engine.pitch = roamDriving ? GearPitch(world.Car.Speed, VehicleController.TopSpeed) : EnginePitch(car.Speed, car.TopSpeed);
+            float sirenAt = driving ? game.Traffic.NearestCop(car.transform.position) : float.MaxValue;
             if (world != null) // your own siren is right on top of you; the chaser's fades with distance
                 sirenAt = world.SirenOn ? 0 : world.Police.gameObject.activeSelf ? world.PoliceDistance : float.MaxValue;
             siren.volume = 0.35f * SirenVolume(sirenAt);

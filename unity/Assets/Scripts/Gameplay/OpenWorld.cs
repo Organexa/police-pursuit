@@ -16,6 +16,7 @@ namespace PolicePursuit.Gameplay
         public const float BustRange = 7, BustSpeed = 3, BustTime = 2; // metres, m/s, seconds
 
         public VehicleController Car { get; private set; }
+        public TyreMarks Tyres { get; private set; }
         public PoliceChase Police { get; private set; }
         public Walker Walker { get; private set; }
         public Health PlayerHealth { get; private set; }
@@ -215,7 +216,9 @@ namespace PolicePursuit.Gameplay
             ParkPoliceCars();
 
             Car = VehicleController.Create(transform, Spawn, Shapes.Cyan);
-            Police = VehicleController.Create(transform, PoliceSpawn, Color.white, police: true).gameObject.AddComponent<PoliceChase>();
+            Car.TakesDamage = true;
+            Tyres = Car.gameObject.AddComponent<TyreMarks>();
+            Police =VehicleController.Create(transform, PoliceSpawn, Color.white, police: true).gameObject.AddComponent<PoliceChase>();
             Walker = Walker.Create(transform);
             PlayerHealth = Walker.gameObject.AddComponent<Health>();
             Gun = Walker.gameObject.AddComponent<WeaponController>();
@@ -440,6 +443,8 @@ namespace PolicePursuit.Gameplay
             Suspect.ResetSuspect();
             Police.Target = Car.transform;
             Car.Handbrake = false;
+            Car.Repair();
+            Tyres.Clear();
             Car.Place(transform.TransformPoint(Spawn), 0);
             Police.GetComponent<VehicleController>().Place(transform.TransformPoint(PoliceSpawn), 0);
             Police.ResetChase();

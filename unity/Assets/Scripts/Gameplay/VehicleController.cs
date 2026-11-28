@@ -23,6 +23,56 @@ namespace PolicePursuit.Gameplay
         WheelCollider[] wheels; // front left, front right, rear left, rear right
         float stuckTime;
 
+        // Damage (only cars with TakesDamage, i.e. yours: AI cars stay fair and never break down).
+        // Hits over DamageFrom m/s of change in speed cost condition; at 0 the engine dies until the car is repaired.
+        public const float MaxCondition = 100, DamageFrom = 4, DamagePerMs = 6;
+        public bool TakesDamage { get; set; }
+        public float Condition { get; private set; } = MaxCondition;
+        public bool Wrecked => Condition <= 0;
+        public void Repair() => Condition = MaxCondition;
+
+        void OnCollisionEnter(Collision hit)
+        {
+            if (!TakesDamage) return;
+            float change = hit.impulse.magnitude / Body.mass; // m/s this car's speed changed by
+            if (change > DamageFrom) Condition = Mathf.Max(0, Condition - (change - DamageFrom) * DamagePerMs);
+        }
+
+        // Brake lights glow while braking or on the handbrake; headlights are always on (it is night).
+        public bool BrakeLightsOn { get; private set; }
+        Renderer[] brakeLamps;
+
+        void AddLamps()
+        {
+            var body = transform.GetChild(0);
+            foreach (float x in new[] { -0.6f, 0.6f })
+                Shapes.Box(body, new Vector3(x, 0.75f, 2.02f), new Vector3(0.4f, 0.15f, 0.05f), Shapes.Hex(0xFFF1C9), glow: 1.5f).name = "Headlight";
+            brakeLamps = new Renderer[2];
+            for (int i = 0; i < 2; i++)
+            {
+                var lamp = Shapes.Box(body, new Vector3(i == 0 ? -0.65f : 0.65f, 0.8f, -2.02f), new Vector3(0.35f, 0.12f, 0.05f), Shapes.Hex(0x5A0A0A));
+                lamp.name = "Brake light";
+                brakeLamps[i] = lamp.GetComponent<Renderer>();
+            }
+        }
+
+        void ShowBrakeLights(bool on)
+        {
+            if (on == BrakeLightsOn || brakeLamps == null) return; // only on a change: no per-frame property blocks
+            BrakeLightsOn = on;
+            foreach (var r in brakeLamps) Shapes.Paint(r, on ? Shapes.Red : Shapes.Hex(0x5A0A0A), on ? 2 : 0);
+        }
+
+        // A rear tyre (0 left, 1 right) that is sliding sideways or spinning/locking, and where it touches the road.
+        public const float SkidSlip = 0.35f;
+        public bool Sliding(int rear, out Vector3 at)
+        {
+            at = default;
+            if (!wheels[2 + rear].GetGroundHit(out var hit) || Mathf.Abs(Speed) < 3) return false;
+            at = hit.point;
+            return Mathf.Abs(hit.sidewaysSlip) > SkidSlip || Mathf.Abs(hit.forwardSlip) > SkidSlip * 1.5f;
+        }
+
         // A police car gets a red and blue light bar on the roof.
         public static VehicleController Create(Transform parent, Vector3 pos, Color paint, bool police = false)
         {
@@ -79,6 +129,7 @@ namespace PolicePursuit.Gameplay
                 Wheel("FL", -0.8f, 1.3f), Wheel("FR", 0.8f, 1.3f),
                 Wheel("RL", -0.8f, -1.3f), Wheel("RR", 0.8f, -1.3f),
             };
+            AddLamps();
         }
 
         WheelCollider Wheel(string name, float x, float z)
@@ -110,9 +161,10 @@ namespace PolicePursuit.Gameplay
             float pedal = Mathf.Clamp(Pedal, -1, 1);
             // Brake while rolling forward; once nearly stopped the same pedal reverses (and gas brakes a reversing car).
             bool braking = (pedal < 0 && speed > 1) || (pedal > 0 && speed < -1);
-            float drive = braking ? 0 : pedal * MaxTorque * (1 - t); // torque fades towards top speed
+            float drive = braking || Wrecked ? 0 : pedal * MaxTorque * (1 - t); // torque fades towards top speed
             if (pedal < 0 && !braking) drive *= 0.5f; // slower in reverse
             float brake = braking ? BrakeTorque * Mathf.Abs(pedal) : 0;
+            ShowBrakeLights(braking || Handbrake);
 
             for (int i = 0; i < 4; i++)
             {
