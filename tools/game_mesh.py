@@ -3,6 +3,8 @@
 Usage (run with the ComfyUI Python, which has trimesh, xatlas and fast-simplification):
     C:\\ComfyUI\\venv\\Scripts\\python.exe tools/game_mesh.py art/generated/20261128-151719-police-car.obj --length 4.6
     ... --yaw 180 --triangles 6000 --texture 512
+    ... --width 1.9 --height 1.5   (squash to real proportions; TripoSR tends to make things fat)
+    ... --level long               (stand it upright: box (default), base or long; see up_axis for which suits what)
 
 Writes <name>-game/<name>.obj + .mtl + .png next to the input (art/generated/ is git-ignored).
 Unity's OBJ importer ignores vertex colours, so they are baked into a texture on a fresh UV unwrap.
@@ -38,6 +40,34 @@ def orient(v: np.ndarray, yaw: float, length: float, width: float | None, height
     if height:
         v[:, 1] *= height / ext[1]
     return v  # sits on y = 0, centred on x and z
+
+
+def up_axis(v: np.ndarray, how: str) -> np.ndarray:
+    # The object's real "up", by one of three rules (no rule suits every shape; checked on 2026-11-28 props):
+    #   box:  the tightest box's axis nearest vertical. Boxes and things on legs (dumpster, bench).
+    #   base: the largest downward face of the convex hull, flipped. Things with a flat foot (barrier).
+    #   long: the longest principal axis. Tall thin things (hydrant, post); its nozzles fool the box rule.
+    if how == "box":
+        axes = trimesh.bounds.oriented_bounds(trimesh.Trimesh(v, process=False))[0][:3, :3]
+        up = axes[np.argmax(np.abs(axes[:, 1]))]
+    elif how == "long":
+        w, vec = np.linalg.eigh(np.cov((v - v.mean(0)).T))
+        up = vec[:, np.argmax(w)]
+    else:
+        hull = trimesh.Trimesh(v, process=False).convex_hull
+        down = [(a, n) for n, a in zip(hull.facets_normal, hull.facets_area) if n[1] < 0]
+        up = -max(down, key=lambda d: d[0])[1] if down else np.array([0.0, 1, 0])
+    return up if up[1] > 0 else -up
+
+
+def level(v: np.ndarray, how: str = "box", within: float = 45) -> tuple[np.ndarray, float]:
+    # Pictures taken from above make TripoSR tilt the object: turn its real "up" to exactly vertical.
+    # Leaves it alone past `within` degrees (the rule picked a side, not the top). Returns the tilt fixed.
+    up = up_axis(v, how)
+    tilt = float(np.degrees(np.arccos(np.clip(up[1], -1, 1))))
+    if tilt > within:
+        return v, 0.0
+    return v @ trimesh.geometry.align_vectors(up, [0, 1, 0])[:3, :3].T, tilt
 
 
 def bake(verts, faces, uvs, src_points, src_colors, size: int) -> Image.Image:
@@ -82,6 +112,8 @@ def main() -> int:
     p.add_argument("--yaw", type=float, default=0, help="extra turn about Y, degrees")
     p.add_argument("--triangles", type=int, default=8000)
     p.add_argument("--texture", type=int, default=1024, help="texture size in pixels")
+    p.add_argument("--level", choices=["box", "base", "long", "none"], default="box",
+                   help="how to stand it upright: box (default; boxes, legs), base (flat foot), long (tall and thin), none")
     a = p.parse_args()
 
     src = trimesh.load(a.mesh, force="mesh", process=False)
@@ -89,7 +121,11 @@ def main() -> int:
         print("The mesh has no vertex colours (expected a TripoSR .obj).", file=sys.stderr)
         return 2
     colors = np.asarray(src.visual.vertex_colors)[:, :3]
-    verts = orient(np.asarray(src.vertices, float), a.yaw, a.length, a.width, a.height)
+    raw = np.asarray(src.vertices, float)
+    if a.level != "none":
+        raw, tilt = level(raw, a.level)
+        print(f"levelled ({a.level}): was {tilt:.0f} degrees off upright")
+    verts = orient(raw, a.yaw, a.length, a.width, a.height)
 
     keep = min(1.0, a.triangles / len(src.faces))
     v, f = fast_simplification.simplify(verts.astype(np.float32), np.asarray(src.faces, np.int32), 1 - keep)

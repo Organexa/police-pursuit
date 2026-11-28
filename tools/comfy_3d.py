@@ -5,7 +5,8 @@ Usage:
     python tools/comfy_3d.py photo.png --name police-car --resolution 256
 
 Best input: one object, whole, centred, on a plain background (make it with comfy_image.py and say
-"isolated on a plain grey background, three-quarter view"); the background is removed automatically (BiRefNet).
+"three-quarter view at eye level, isolated on a plain grey background"); the background is removed automatically
+(BiRefNet). Pictures from above make TripoSR build the object tilted; game_mesh.py --level fixes that afterwards.
 The mesh carries vertex colours, no texture. ComfyUI must be running first: double-click C:\\ComfyUI\\run_cpu.bat.
 Needs the ComfyUI-Flowty-TripoSR node, models/checkpoints/triposr.ckpt and
 models/background_removal/birefnet.safetensors. Meshes go to art/generated/ (git-ignored).
