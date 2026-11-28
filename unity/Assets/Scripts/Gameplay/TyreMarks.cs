@@ -32,17 +32,26 @@ namespace PolicePursuit.Gameplay
             var main = smoke.main;
             main.loop = false;
             main.playOnAwake = false;
-            main.startLifetime = 1.2f;
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 1.2f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.4f);
-            main.maxParticles = 200;
+            main.startLifetime = 1.0f;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 1f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.35f, 0.8f);
+            main.maxParticles = 150;
             main.gravityModifier = -0.05f; // drifts up a little
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             var emission = smoke.emission;
             emission.enabled = false; // puffs only, by Emit
+            // Grows and fades out over its life, so puffs thin away instead of popping off.
+            var size = smoke.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1, AnimationCurve.Linear(0, 0.6f, 1, 1.6f));
+            var fade = smoke.colorOverLifetime;
+            fade.enabled = true;
+            var g = new Gradient();
+            g.SetKeys(new[] { new GradientColorKey(Color.white, 0), new GradientColorKey(Color.white, 1) },
+                      new[] { new GradientAlphaKey(1, 0), new GradientAlphaKey(0, 1) });
+            fade.color = g;
             var r = go.GetComponent<ParticleSystemRenderer>();
-            r.material = new Material(Resources.Load<Shader>("Flat")); // always in the build
-            r.material.SetColor("_Color", new Color(0.55f, 0.57f, 0.6f));
+            r.material = new Material(Resources.Load<Shader>("Smoke")); // soft and see-through; always in the build
         }
 
         void Update()

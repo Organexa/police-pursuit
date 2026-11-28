@@ -2085,6 +2085,9 @@ public class FlowTests
         car.Steer = 0;
         Assert.Greater(world.Tyres.Showing, 2, "skid marks on the road");
         Assert.Greater(world.Tyres.SmokePuffs, puffs, "tyre smoke");
+        var smoke = world.transform.Find("Tyre smoke").GetComponent<ParticleSystemRenderer>().sharedMaterial;
+        Assert.AreEqual("Smoke", smoke.shader.name, "soft see-through puffs, not the opaque Flat shader");
+        Assert.GreaterOrEqual(smoke.renderQueue, 3000, "drawn as transparent");
 
         world.ResetCar();
         Assert.AreEqual(0, world.Tyres.Showing, "a fresh start clears the road");
