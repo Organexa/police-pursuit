@@ -23,12 +23,12 @@ Each round is one sitting of about 10 minutes. Once every box for a ticket is ti
 - [x] OW32 / OW33 Wet prints behind you and the dog for a few seconds after the water.
 
 ## Round 3 — A long chase (keep driving fast, don't stop)
-- [ ] OW19 / OW20 / OW39 Roadblock ahead with a strip before it and a gap on the right; its cars join the chase once you pass.
-- [ ] OW21 Traffic pulls over for moving roadblock cars.
-- [ ] OW22 / OW23 Stars climb; at 4 the helicopter comes; its light leads you; a fast car outruns it; hide and the stars drop.
-- [ ] OW24 Tunnel (west side, heading north): HELICOPTER LOST YOU inside, found again outside.
-- [ ] OW38 / OW40 / OW41 / OW42 Spike strips: right lane, crossroads, from the helicopter, at the tunnel end; each leaves a way through; hitting one says TYRES BLOWN and slows you.
-- [ ] OW43 Canal in the south: bridges on the north–south roads, railings keep the car out, a strip on the bridge you head for.
+- [x] OW19 / OW20 / OW39 Roadblock ahead with a strip before it and a gap on the right; its cars join the chase once you pass.
+- [x] OW21 Traffic pulls over for moving roadblock cars.
+- [x] OW22 / OW23 Stars climb; at 4 the helicopter comes; its light leads you; a fast car outruns it; hide and the stars drop.
+- [x] OW24 Tunnel (west side, heading north): HELICOPTER LOST YOU inside, found again outside.
+- [x] OW38 / OW40 / OW41 / OW42 Spike strips: right lane, crossroads, from the helicopter, at the tunnel end; each leaves a way through; hitting one says TYRES BLOWN and slows you.
+- [x] OW43 Canal in the south: bridges on the north–south roads, railings keep the car out, a strip on the bridge you head for.
 
 ## Round 4 — Weather (needs ~3 min in one place)
 - [ ] OW34 A shower comes: rain, thicker fog; it washes prints away.
