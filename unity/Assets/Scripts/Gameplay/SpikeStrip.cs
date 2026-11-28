@@ -11,6 +11,10 @@ namespace PolicePursuit.Gameplay
         public const float LaneLength = 5, Depth = 0.8f, Inner = 1, PuncturedScale = 0.5f; // metres across from the centre line
         public float Length { get; private set; } = LaneLength; // a full-width strip (at crossroads) is longer
         public bool Active => strip.activeSelf;
+        // Dropped from the helicopter: it falls for a moment and only bites once it is down.
+        public const float FallFor = 0.8f;
+        public bool Falling => fallLeft > 0;
+        float fallLeft, fallFrom;
         public Vector3 Centre { get; private set; }
         public Vector3 Along { get; private set; } // direction of travel the strip faces
         GameObject strip;
@@ -50,12 +54,35 @@ namespace PolicePursuit.Gameplay
             nextAt = sinceStart + Every;
         }
 
-        public void Clear() => strip.SetActive(false);
+        public void Clear()
+        {
+            strip.SetActive(false);
+            fallLeft = 0;
+        }
+
+        public void Drop(float fromHeight)
+        {
+            fallFrom = fromHeight;
+            fallLeft = FallFor;
+            Fall(0);
+        }
+
+        void Update()
+        {
+            if (Falling) Fall(Time.deltaTime);
+        }
+
+        void Fall(float dt)
+        {
+            fallLeft = Mathf.Max(0, fallLeft - dt);
+            var p = strip.transform.position;
+            strip.transform.position = new Vector3(p.x, transform.position.y + fallFrom * (fallLeft / FallFor), p.z);
+        }
 
         // True when a point is over the strip (the car's centre is close enough: its wheels are wider than that).
         public bool Over(Vector3 p)
         {
-            if (!Active) return false;
+            if (!Active || Falling) return false;
             var local = Quaternion.Inverse(Quaternion.LookRotation(Along)) * (p - Centre);
             return Mathf.Abs(local.x) < Length / 2 + 0.6f && Mathf.Abs(local.z) < Depth / 2 + 1.2f;
         }

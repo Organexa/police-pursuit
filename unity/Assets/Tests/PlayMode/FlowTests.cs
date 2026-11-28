@@ -1815,4 +1815,39 @@ public class FlowTests
         world.Police.enabled = true;
     }
 
+    [UnityTest]
+    public IEnumerator HelicopterDropsASpikeStripAhead()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        world.Car.Place(new Vector3(PolicePursuit.Gameplay.CivilCar.Lane, 0.6f, -40), 0);
+        world.ChaseTime = 95;
+        Time.timeScale = 4;
+        for (float t = 0; t < 20 && !world.Heli.Overhead; t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsTrue(world.Heli.Overhead);
+
+        world.Car.Place(new Vector3(PolicePursuit.Gameplay.CivilCar.Lane, 0.6f, -40), 0);
+        yield return new WaitForFixedUpdate();
+        world.Car.Body.linearVelocity = Vector3.forward * 12; // heading north up the centre road
+        Assert.IsTrue(world.DropFromHelicopter());
+        var strip = world.HeliSpikes;
+        Assert.IsTrue(strip.Falling, "it falls from the helicopter first");
+        Assert.IsFalse(strip.Over(strip.Centre), "and does nothing until it lands");
+        Assert.Greater(strip.Centre.z, 0, "beyond the next crossroads ahead");
+        Assert.Greater(strip.Centre.x, 0, "on the right-hand lane: the other stays clear");
+
+        yield return new WaitForSeconds(PolicePursuit.Gameplay.SpikeStrip.FallFor + 0.2f);
+        Assert.IsFalse(strip.Falling);
+        Assert.IsTrue(strip.Over(strip.Centre), "down on the road");
+        Assert.IsFalse(strip.Over(new Vector3(-PolicePursuit.Gameplay.CivilCar.Lane, 0, strip.Centre.z)), "left lane clear");
+        world.Police.enabled = true;
+    }
+
 }

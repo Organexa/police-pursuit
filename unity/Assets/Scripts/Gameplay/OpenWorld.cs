@@ -44,6 +44,10 @@ namespace PolicePursuit.Gameplay
         public RoadBlock Block { get; private set; }
         public SpikeStrip Spikes { get; private set; }
         public CrossroadSpikes JunctionSpikes { get; private set; }
+        // The helicopter drops its own strip ahead of you while it can see you driving fast.
+        public SpikeStrip HeliSpikes { get; private set; }
+        public const float HeliDropFirst = 10, HeliDropEvery = 40, HeliDropSpeed = 8;
+        float heliOverheadFor, nextHeliDrop = HeliDropFirst;
         public bool Punctured { get; private set; } // tyres blown on a spike strip: half speed until you start over
 
         // Wanted level while the police are after you: 1 star, one more every 30 s (the endless run's rule), up to 5.
@@ -226,6 +230,9 @@ namespace PolicePursuit.Gameplay
             JunctionSpikes = new GameObject("Crossroads spikes").AddComponent<CrossroadSpikes>();
             JunctionSpikes.transform.SetParent(transform, false);
             JunctionSpikes.Init();
+            HeliSpikes = new GameObject("Helicopter spikes").AddComponent<SpikeStrip>();
+            HeliSpikes.transform.SetParent(transform, false);
+            HeliSpikes.Init();
             Block.Spawned += () => Spikes.Spawn(Block.From, Block.To, 0.5f - RoadBlock.SpikesBefore / Pitch);
             Traffic.MoreSirens = Block.Cars; // only count while they are driving: a parked roadblock is silent
             Lights = new GameObject("Traffic lights").AddComponent<TrafficLights>();
@@ -378,6 +385,9 @@ namespace PolicePursuit.Gameplay
             Block.ResetBlock();
             Spikes.ResetStrip();
             JunctionSpikes.ResetSpikes();
+            HeliSpikes.Clear();
+            heliOverheadFor = 0;
+            nextHeliDrop = HeliDropFirst;
             Punctured = false;
             Car.SpeedLimit = VehicleController.TopSpeed;
             ChaseTime = loseTime = 0;
@@ -410,6 +420,25 @@ namespace PolicePursuit.Gameplay
         // Out of every way the police have of knowing where you are.
         public static bool Hidden(float policeDistance, bool policeSee, bool inSearchlight, bool dogBarking) =>
             policeDistance > LoseRange && !policeSee && !inSearchlight && !dogBarking;
+
+        void TickHeliDrop(float dt)
+        {
+            if (!Heli.gameObject.activeSelf || !Heli.Overhead) { heliOverheadFor = 0; nextHeliDrop = HeliDropFirst; return; }
+            heliOverheadFor += dt;
+            if (HeliSpikes.Active && !HeliSpikes.Falling
+                && Vector3.Dot(Car.transform.position - HeliSpikes.Centre, HeliSpikes.Along) > SpikeStrip.ClearBehind) HeliSpikes.Clear();
+            if (heliOverheadFor < nextHeliDrop || !Heli.CanSee || OnFoot || Mathf.Abs(Car.Speed) < HeliDropSpeed) return;
+            nextHeliDrop = heliOverheadFor + HeliDropEvery;
+            DropFromHelicopter();
+        }
+
+        public bool DropFromHelicopter()
+        {
+            if (!RoadBlock.Plan(Car.transform.position, Car.Body.linearVelocity, out var a, out var b)) return false;
+            HeliSpikes.Spawn(a, b);
+            HeliSpikes.Drop(Helicopter.Height);
+            return true;
+        }
 
         void TickWanted(float dt)
         {
@@ -456,7 +485,9 @@ namespace PolicePursuit.Gameplay
             Block.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             Spikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
             JunctionSpikes.Tick(Car, Police.gameObject.activeSelf && Police.Target != null && !OnFoot, Time.deltaTime);
-            if (!Punctured && !OnFoot && (Spikes.Over(Car.transform.position) || JunctionSpikes.Over(Car.transform.position)))
+            TickHeliDrop(Time.deltaTime);
+            if (!Punctured && !OnFoot && (Spikes.Over(Car.transform.position) || JunctionSpikes.Over(Car.transform.position)
+                                          || HeliSpikes.Over(Car.transform.position)))
             {
                 Punctured = true;
                 Car.SpeedLimit = VehicleController.TopSpeed * SpikeStrip.PuncturedScale;
