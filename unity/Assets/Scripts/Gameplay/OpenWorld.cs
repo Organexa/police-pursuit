@@ -70,6 +70,40 @@ namespace PolicePursuit.Gameplay
         // One covered road: from the west-centre crossroads north to the next one. The helicopter cannot see into it.
         public static readonly Vector2Int TunnelFrom = new Vector2Int(1, 2), TunnelTo = new Vector2Int(1, 3);
         public const float TunnelRoof = 5.5f;
+        // Hiding in traffic: crawling along with a civilian car close in front and another close behind, in your
+        // lane, for a few seconds, and the helicopter loses you among them.
+        public const float TrafficCrawl = 8, TrafficGap = 12, TrafficLane = 2.5f, TrafficHideAfter = 3;
+        public bool HiddenInTraffic => trafficTime >= TrafficHideAfter;
+        float trafficTime;
+
+        public static bool Sandwiched(Vector3 pos, Vector3 forward, System.Collections.Generic.IEnumerable<Vector3> cars)
+        {
+            forward.y = 0;
+            forward.Normalize();
+            bool ahead = false, behind = false;
+            foreach (var c in cars)
+            {
+                var d = c - pos;
+                d.y = 0;
+                float along = Vector3.Dot(d, forward);
+                float side = (d - forward * along).magnitude;
+                if (side > TrafficLane) continue;
+                if (along > 2 && along < TrafficGap) ahead = true;
+                if (along < -2 && along > -TrafficGap) behind = true;
+            }
+            return ahead && behind;
+        }
+
+        readonly System.Collections.Generic.List<Vector3> nearbyCars = new System.Collections.Generic.List<Vector3>();
+        bool InTraffic()
+        {
+            if (OnFoot || Mathf.Abs(Car.Speed) >= TrafficCrawl) return false;
+            nearbyCars.Clear();
+            foreach (var c in Traffic.Cars)
+                if (c.gameObject.activeSelf && !c.Crashed) nearbyCars.Add(c.transform.position);
+            return Sandwiched(Car.transform.position, Car.transform.forward, nearbyCars);
+        }
+
         public static bool InTunnel(Vector3 p)
         {
             var a = PoliceChase.Centre(TunnelFrom);
@@ -365,6 +399,7 @@ namespace PolicePursuit.Gameplay
 
         void TickWanted(float dt)
         {
+            trafficTime = InTraffic() ? trafficTime + dt : 0;
             if (!Chased) { ChaseTime = loseTime = 0; Heli.Leave(); return; }
             ChaseTime += dt;
             bool hidden = Hidden(PoliceDistance, Police.InSight, Heli.InBeam(Player.position), Dog.Barking);
@@ -374,7 +409,7 @@ namespace PolicePursuit.Gameplay
             {
                 if (!Heli.gameObject.activeSelf) Heli.Arrive(Player.position);
                 var velocity = OnFoot ? Walker.transform.forward * Walker.Speed : Car.Body.linearVelocity;
-                Heli.Tick(Player.position, velocity, dt, !InTunnel(Player.position));
+                Heli.Tick(Player.position, velocity, dt, !InTunnel(Player.position) && !HiddenInTraffic);
             }
             else if (Heli.gameObject.activeSelf) Heli.Leave();
         }

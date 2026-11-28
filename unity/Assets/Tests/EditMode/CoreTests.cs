@@ -550,4 +550,16 @@ public class CoreTests
         Assert.IsTrue(Weather.RainingAt(Weather.Cycle - 1));
         Assert.IsFalse(Weather.RainingAt(Weather.Cycle + 1), "and dry again");
     }
+
+    [Test]
+    public void HidingInTrafficNeedsACarInFrontAndBehind()
+    {
+        var at = Vector3.zero;
+        var north = Vector3.forward;
+        Assert.IsTrue(OpenWorld.Sandwiched(at, north, new[] { new Vector3(0, 0, 7), new Vector3(0.5f, 0, -6) }));
+        Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(0, 0, 7) }), "only one in front");
+        Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(0, 0, 7), new Vector3(0, 0, -20) }), "the one behind is too far back");
+        Assert.IsFalse(OpenWorld.Sandwiched(at, north, new[] { new Vector3(4, 0, 7), new Vector3(0, 0, -6) }), "the one in front is in the next lane");
+    }
+
 }

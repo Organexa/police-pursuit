@@ -623,7 +623,13 @@ public class FlowTests
         }
 
         // Shots pass through them and they are never a target (someone on the pavement: on a crossing cars can see them).
-        var walker = people.Find(p => !p.Crossing && !p.WaitingToCross);
+        // Someone on the pavement, well away from the police car (people near it panic anyway) and from your car.
+        var policeAt = world.Police.transform.position;
+        var carAt = world.Car.transform.position;
+        var walker = people.Find(p => !p.Crossing && !p.WaitingToCross && !p.Panicking
+            && Vector3.Distance(p.transform.position, policeAt) > PolicePursuit.Gameplay.Pedestrians.PoliceNear + 10
+            && Vector3.Distance(p.transform.position, carAt) > PolicePursuit.Gameplay.Pedestrians.FastCarNear + 10);
+        Assert.IsNotNull(walker, "someone suitable to watch");
         var off0 = walker.transform.position - walker.Block;
         var outward = Mathf.Abs(off0.x) > Mathf.Abs(off0.z) ? new Vector3(Mathf.Sign(off0.x), 0, 0) : new Vector3(0, 0, Mathf.Sign(off0.z));
         var from = walker.transform.position + outward * 3 + Vector3.up * 1.2f; // from the road side
@@ -1651,4 +1657,50 @@ public class FlowTests
         Assert.AreEqual(1, mine, "one splash per pass, not one per frame");
         Assert.Greater(puddles.Splashes, before);
     }
+
+    [UnityTest]
+    public IEnumerator HelicopterLosesYouInTraffic()
+    {
+        yield return null;
+        var game = GameManager.Instance;
+        game.ToMenu();
+        game.StartFreeRoam();
+        var world = game.World;
+        var heli = world.Heli;
+        world.Police.enabled = false; // parked in its corner: still a chase, no bust
+        var police = world.Police.GetComponent<PolicePursuit.Gameplay.VehicleController>();
+        police.Pedal = police.Steer = 0;
+        var lane = new Vector3(PolicePursuit.Gameplay.CivilCar.Lane, 0.6f, 20); // northbound lane north of the centre
+        world.Car.Place(lane, 0);
+        world.ChaseTime = 95;
+        Time.timeScale = 4;
+        for (float t = 0; t < 20 && !heli.InBeam(world.Player.position); t += Time.deltaTime) yield return null;
+        Time.timeScale = 1;
+        Assert.IsTrue(heli.InBeam(world.Player.position), "found you first");
+
+        // Crawl along with one civilian car just in front and one just behind.
+        var front = world.Traffic.Cars[0];
+        var back = world.Traffic.Cars[1];
+        float z = lane.z;
+        for (float t = 0; t < PolicePursuit.Gameplay.OpenWorld.TrafficHideAfter + 0.5f; t += Time.deltaTime)
+        {
+            z += 4 * Time.deltaTime;
+            world.Car.Place(new Vector3(lane.x, 0.6f, z), 0);
+            front.Body.position = new Vector3(lane.x, 0, z + 7);
+            back.Body.position = new Vector3(lane.x, 0, z - 7);
+            front.Body.rotation = back.Body.rotation = Quaternion.identity;
+            yield return null;
+        }
+        Assert.IsTrue(world.HiddenInTraffic);
+        Assert.IsFalse(heli.CanSee, "lost you among the cars");
+        Assert.IsFalse(heli.InBeam(world.Player.position));
+
+        front.Body.position = new Vector3(lane.x, 0, z + 60); // the car in front drives off
+        yield return null;
+        yield return null;
+        Assert.IsFalse(world.HiddenInTraffic, "out of cover");
+        Assert.IsTrue(heli.CanSee, "and seen again");
+        world.Police.enabled = true;
+    }
+
 }
